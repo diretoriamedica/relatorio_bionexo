@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Rede Hospital Casa</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#222;display:flex;min-height:100vh}
+:root{--navy:#1F3864;--blue:#2E75B6;--green:#70AD47;--orange:#ED7D31;--red:#C00000;--ent:#C8380A;--ec-ent:#2E75B6;--ec-sai:#ED7D31}
+
+/* SIDEBAR */
+#sidebar{width:230px;min-width:230px;background:var(--navy);color:#fff;padding:16px 12px;display:flex;flex-direction:column;gap:10px;position:sticky;top:0;height:100vh;overflow-y:auto}
+#sidebar h2{font-size:.95rem;font-weight:700;letter-spacing:.5px;padding:8px 0 4px;border-bottom:1px solid #ffffff30;margin-bottom:4px}
+#sidebar .slab{font-size:.72rem;color:#aac4e0;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+#sidebar label{display:flex;align-items:center;gap:6px;font-size:.8rem;padding:3px 0;cursor:pointer}
+#sidebar label input[type=checkbox]{accent-color:var(--orange)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+.note{font-size:.68rem;color:#90b8d8;margin-top:4px;line-height:1.4}
+select{width:100%;padding:5px 7px;border-radius:5px;border:none;font-size:.8rem;margin-top:3px}
+input[type=range]{width:100%;accent-color:var(--orange)}
+.range-row{display:flex;justify-content:space-between;font-size:.72rem;color:#aac4e0}
+
+/* MAIN */
+main{flex:1;display:flex;flex-direction:column;min-height:100vh}
+.tabs{display:flex;gap:4px;padding:10px 14px 0;background:#fff;border-bottom:2px solid #e0e4ea;flex-wrap:wrap}
+.tb{padding:7px 14px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-size:.82rem;font-weight:600;background:#e8edf3;color:#444;transition:all .15s}
+.tb:hover{background:#d0d8e8}
+.tb.active{background:var(--navy);color:#fff}
+.tb.ent{background:var(--ent);color:#fff;opacity:.75}
+.tb.ent.active,.tb.ent:hover{opacity:1}
+.tb.ec{background:#1a5276;color:#fff;opacity:.75}
+.tb.ec.active,.tb.ec:hover{opacity:1}
+#panels{flex:1;padding:14px;overflow-y:auto}
+.panel{display:none}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 4px #0001;margin-bottom:12px}
+.card h3{font-size:.9rem;color:var(--navy);margin-bottom:10px;font-weight:700}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.ch{position:relative;height:280px}
+.ch.t{height:340px}
+
+/* KPI CARDS */
+.krow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.kcard{background:#fff;border-radius:10px;padding:14px 18px;box-shadow:0 1px 4px #0001;min-width:160px;flex:1;border-left:4px solid var(--blue)}
+.kcard.g{border-left-color:var(--green)}
+.kcard.o{border-left-color:var(--orange)}
+.kcard.n{border-left-color:var(--navy)}
+.kcard.e{border-left-color:var(--ent)}
+.klb{font-size:.72rem;color:#777;text-transform:uppercase;letter-spacing:.5px}
+.kv{font-size:1.35rem;font-weight:700;color:var(--navy);margin:4px 0 2px}
+.ks{font-size:.72rem;color:#999}
+
+/* HEATMAP */
+.hm-row{display:flex;align-items:center;margin-bottom:3px;gap:6px}
+.hm-label{width:200px;font-size:.75rem;text-align:right;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-cells{display:grid;flex:1;gap:2px}
+.hm-cell{border-radius:3px;padding:3px 2px;text-align:center;cursor:default;transition:opacity .1s}
+.hm-cell:hover{opacity:.8}
+.mn{font-size:.6rem;opacity:.7}
+.mv{font-size:.7rem;font-weight:600}
+
+/* TABLES */
+.tw{overflow-x:auto;max-height:420px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead{position:sticky;top:0;z-index:1}
+th{background:var(--navy);color:#fff;padding:7px 10px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#2a4a80}
+td{padding:6px 10px;border-bottom:1px solid #f0f0f0}
+tr:hover td{background:#f7f9fc}
+td.r{text-align:right}
+.pn{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bcat{display:inline-block;padding:2px 7px;border-radius:3px;color:#fff;font-size:.68rem;font-weight:700;white-space:nowrap}
+.bw{height:5px;background:#eee;border-radius:3px;margin-top:2px}
+.bf{height:5px;border-radius:3px}
+
+/* ENTERAL */
+.ent-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.ent-card{border-radius:10px;padding:14px 18px;color:#fff;min-width:160px;flex:1;box-shadow:0 2px 6px #0002}
+.el{font-size:.72rem;opacity:.85;text-transform:uppercase;letter-spacing:.5px}
+.ev{font-size:1.3rem;font-weight:700;margin:4px 0 2px}
+.es{font-size:.7rem;opacity:.75}
+
+/* FILTERS (EC) */
+.fc-row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;padding:10px 14px;background:#fff;border-radius:8px;margin-bottom:12px;box-shadow:0 1px 3px #0001}
+.fc-group label{display:flex;align-items:center;gap:5px;font-size:.78rem;cursor:pointer;margin:2px 0}
+.fc-group strong{display:block;font-size:.72rem;color:#555;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+
+.footer{text-align:center;padding:14px;font-size:.72rem;color:#aaa;background:#fff;border-top:1px solid #eee;margin-top:auto}
+#ld{position:fixed;inset:0;background:#1F3864ee;display:flex;align-items:center;justify-content:center;z-index:999;color:#fff;font-size:1.2rem;font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="ld">⏳ Carregando dashboard…</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div style="font-size:1rem;font-weight:700;letter-spacing:.5px;padding-bottom:8px;border-bottom:1px solid #ffffff30">
+    🏥 Rede Hospital Casa
+  </div>
+
+  <div>
+    <div class="slab">Visão Bionexo</div>
+    <h2>Ano</h2>
+    <div id="fano" style="display:flex;flex-direction:column;gap:2px"></div>
+    <h2 style="margin-top:8px">Categoria</h2>
+    <div id="fcat" style="display:flex;flex-direction:column;gap:2px"></div>
+    <h2 style="margin-top:8px">Período (Mês)</h2>
+    <div class="range-row"><span id="lmde">Jan</span><span id="lmat">Dez</span></div>
+    <input type="range" id="fmde" min="1" max="12" value="1" oninput="onRng()">
+    <input type="range" id="fmat" min="1" max="12" value="12" oninput="onRng()">
+    <button onclick="resetFilters()" style="margin-top:8px;width:100%;padding:6px;border:1px solid #fff4;border-radius:5px;background:transparent;color:#fff;cursor:pointer;font-size:.78rem">↺ Limpar filtros</button>
+    <div class="note" id="data-note">2024: mar–dez · 2025: jan–dez · 2026: jan–mar</div>
+  </div>
+
+  <div style="margin-top:8px">
+    <div class="slab">Buscar item</div>
+    <input id="si" placeholder="🔍 Nome do produto…" oninput="renderItens()"
+      style="width:100%;padding:5px 8px;border-radius:5px;border:none;font-size:.78rem;margin-top:4px">
+    <select id="sic" onchange="renderItens()" style="margin-top:4px">
+      <option value="">Todas as categorias</option>
+    </select>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main>
+  <div class="tabs">
+    <button class="tb active" onclick="setTab('geral',this)">📊 Visão Geral</button>
+    <button class="tb" onclick="setTab('cat',this)">🏷 Categorias</button>
+    <button class="tb" onclick="setTab('itens',this)">📋 Itens</button>
+    <button class="tb" onclick="setTab('mensal',this)">📅 Mensal</button>
+    <button class="tb ent" onclick="setTab('enteral',this)">🍼 Dieta Enteral</button>
+    <button class="tb ec" onclick="setTab('ec',this)">📦 Entrada &amp; Consumo</button>
+  </div>
+
+  <div id="panels">
+
+    <!-- VISÃO GERAL -->
+    <div id="panel-geral" class="panel active">
+      <div class="krow" id="krow"></div>
+      <div class="g2">
+        <div class="card"><h3>📊 Gastos por Categoria</h3><div class="ch"><canvas id="c-catbar"></canvas></div></div>
+        <div class="card"><h3>📈 Evolução Mensal por Ano</h3><div class="ch"><canvas id="c-evo"></canvas></div></div>
+      </div>
+      <div class="card"><h3>🗓 Mapa de Calor — Categoria × Mês</h3><div id="heatmap"></div></div>
+    </div>
+
+    <!-- CATEGORIAS -->
+    <div id="panel-cat" class="panel">
+      <div class="g2">
+        <div class="card"><h3>🍩 Participação por Categoria</h3><div class="ch"><canvas id="c-pie"></canvas></div></div>
+        <div class="card"><h3>📊 Categoria × Ano</h3><div class="ch"><canvas id="c-catano"></canvas></div></div>
+      </div>
+      <div class="card">
+        <h3>📋 Resumo por Categoria</h3>
+        <div class="tw"><table id="t-cat">
+          <thead><tr>
+            <th onclick="sortT('t-cat',0)">Categoria ⇅</th>
+            <th onclick="sortT('t-cat',1)" style="text-align:right">Valor Total ⇅</th>
+            <th onclick="sortT('t-cat',2)" style="text-align:right">Qtd ⇅</th>
+            <th onclick="sortT('t-cat',3)" style="text-align:right">% ⇅</th>
+          </tr></thead>
+          <tbody id="tb-cat"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ITENS -->
+    <div id="panel-itens" class="panel">
+      <div class="card"><h3>🏆 Top 20 Itens por Valor</h3><div class="ch t"><canvas id="c-topitens"></canvas></div></div>
+      <div class="card">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <h3 style="margin:0">📋 Todos os Itens</h3>
+          <span id="icnt" style="font-size:.75rem;color:#888;margin-left:4px"></span>
+        </div>
+        <div class="tw"><table id="t-itens">
+          <thead><tr>
+            <th>#</th>
+            <th onclick="sortT('t-itens',1)">Produto ⇅</th>
+            <th onclick="sortT('t-itens',2)">Categoria ⇅</th>
+            <th onclick="sortT('t-itens',3)" style="text-align:right">Valor ⇅</th>
+            <th onclick="sortT('t-itens',4)" style="text-align:right">Qtd ⇅</th>
+            <th onclick="sortT('t-itens',5)" style="text-align:right">Compras ⇅</th>
+            <th onclick="sortT('t-itens',6)" style="text-align:right">% ⇅</th>
+          </tr></thead>
+          <tbody id="tb-itens"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- MENSAL -->
+    <div id="panel-mensal" class="panel">
+      <div class="card"><h3>📅 Gasto Mensal por Ano</h3><div class="ch"><canvas id="c-mensal"></canvas></div></div>
+      <div class="card">
+        <h3>📋 Tabela Mensal</h3>
+        <div class="tw"><table id="t-mensal">
+          <thead><tr>
+            <th onclick="sortT('t-mensal',0)">Ano ⇅</th>
+            <th onclick="sortT('t-mensal',1)">Mês ⇅</th>
+            <th onclick="sortT('t-mensal',2)" style="text-align:right">Valor ⇅</th>
+            <th onclick="sortT('t-mensal',3)" style="text-align:right">Qtd ⇅</th>
+            <th onclick="sortT('t-mensal',4)" style="text-align:right">Itens Únicos ⇅</th>
+          </tr></thead>
+          <tbody id="tb-mensal"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- DIETA ENTERAL -->
+    <div id="panel-enteral" class="panel">
+      <div class="ent-summary" id="ent-kpis"></div>
+      <div class="g2" style="margin-bottom:14px">
+        <div class="card"><h3 style="color:var(--ent)">🍼 Gasto Mensal 2025–2026</h3><div class="ch"><canvas id="c-ent-mes"></canvas></div></div>
+        <div class="card"><h3 style="color:var(--ent)">📦 Participação por Seção</h3><div class="ch"><canvas id="c-ent-sec"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <h3 style="color:var(--ent)">🏆 Top Produtos — Dieta Enteral</h3>
+        <div class="ch t"><canvas id="c-ent-top"></canvas></div>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--ent)">📋 Todos os Produtos Enteral</h3>
+        <div class="tw"><table id="t-ent">
+          <thead><tr>
+            <th>#</th>
+            <th onclick="sortT('t-ent',1)">Produto ⇅</th>
+            <th onclick="sortT('t-ent',2)">Seção ⇅</th>
+            <th onclick="sortT('t-ent',3)" style="text-align:right">Valor ⇅</th>
+            <th onclick="sortT('t-ent',4)" style="text-align:right">Qtd ⇅</th>
+          </tr></thead>
+          <tbody id="tb-ent"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ENTRADA & CONSUMO -->
+    <div id="panel-ec" class="panel">
+      <div class="ent-summary" id="ec-kpis"></div>
+      <div class="fc-row">
+        <div class="fc-group"><strong>Ano</strong><div id="ec-fano"></div></div>
+        <div class="fc-group"><strong>Base / Sistema</strong><div id="ec-fbase"></div></div>
+        <div class="fc-group"><strong>Tipo de Saída</strong><div id="ec-ftipo"></div></div>
+        <button onclick="resetECFilters()" style="margin-left:auto;align-self:flex-end;padding:6px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;font-size:.78rem">↺ Limpar</button>
+      </div>
+      <div class="g2" style="margin-bottom:14px">
+        <div class="card"><h3>📈 Evolução Mensal — Entrada vs Consumo</h3><div class="ch"><canvas id="c-ec-evo"></canvas></div></div>
+        <div class="card"><h3>🔄 Tipos de Saída</h3><div class="ch"><canvas id="c-ec-tipo"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>🏥 Entrada &amp; Consumo por Unidade</h3>
+        <div class="ch t"><canvas id="c-ec-unid"></canvas></div>
+      </div>
+      <div class="g2" style="margin-bottom:14px">
+        <div class="card"><h3>🏆 Top 20 Itens — Consumo</h3><div class="ch t"><canvas id="c-ec-top-sai"></canvas></div></div>
+        <div class="card"><h3>📥 Top 20 Itens — Entrada</h3><div class="ch t"><canvas id="c-ec-top-ent"></canvas></div></div>
+      </div>
+      <div class="card">
+        <h3>📋 Resumo por Unidade</h3>
+        <div class="tw"><table id="t-ec-unid">
+          <thead><tr>
+            <th onclick="sortT('t-ec-unid',0)">Unidade ⇅</th>
+            <th onclick="sortT('t-ec-unid',1)">Base ⇅</th>
+            <th onclick="sortT('t-ec-unid',2)" style="text-align:right">Entrada ⇅</th>
+            <th onclick="sortT('t-ec-unid',3)" style="text-align:right">Consumo ⇅</th>
+            <th onclick="sortT('t-ec-unid',4)" style="text-align:right">Saldo ⇅</th>
+            <th onclick="sortT('t-ec-unid',5)" style="text-align:right">Cobertura ⇅</th>
+          </tr></thead>
+          <tbody id="tb-ec-unid"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+  </div><!-- /panels -->
+
+  <div class="footer">Dashboard Rede Hospital Casa · Bionexo · Dieta Enteral · Entrada &amp; Consumo · 2026</div>
+</main>
+
+<script>
+const D = {"anos":[2024,2025,2026],"cats":["Acessórios de Equipamento Médico","Dieta Enteral","Formulários / Gráficos","Gêneros Alimentícios","Imobilizado/Ativo Fixo","Materiais Médicos","Materiais de Escritório e Informática","Materiais de Limpeza / Descartáveis","Medicamentos","Rouparia / Tecidos","Uniforme e Epis"],"kpis":{"2024":{"v":65468901.09,"q":31241556.0,"i":3832,"n":19625},"2025":{"v":89540341.53,"q":46043510.0,"i":4755,"n":28675},"2026":{"v":9311112.56,"q":4451803.0,"i":2562,"n":4400},"total":{"v":164320355.18,"q":81736869.0,"i":6085,"n":52700}},"evo":{"2024":{"1":0.0,"2":0.0,"3":6878430.6,"4":9073358.43,"5":6527336.93,"6":4446484.48,"7":6477394.04,"8":7822977.57,"9":6281128.58,"10":6409519.01,"11":5366041.59,"12":6186229.86},"2025":{"1":9203358.36,"2":6592012.15,"3":6422528.97,"4":7452309.45,"5":8343116.17,"6":7664927.16,"7":7087600.32,"8":7194288.32,"9":8282923.8,"10":8692915.44,"11":7340813.14,"12":5263548.25},"2026":{"1":4821728.03,"2":4450144.01,"3":39240.52,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0,"10":0.0,"11":0.0,"12":0.0}},"cat":{"Acessórios de Equipamento Médico":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2025":{"1":[3856.0,6.0],"2":[13749.35,56.0],"3":[3284.36,12.0],"4":[27937.5,230.0],"5":[19196.1,58.0],"6":[48874.0,110.0],"7":[16855.0,73.0],"8":[39189.0,182.0],"9":[25887.5,122.0],"10":[51765.0,297.0],"11":[64600.0,250.0],"12":[3750.0,10.0]},"2026":{"1":[17458.0,62.0],"2":[8985.0,29.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Dieta Enteral":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2025":{"1":[182154.0,7218.0],"2":[242872.0,9624.0],"3":[242872.0,9624.0],"4":[182154.0,7218.0],"5":[303590.0,12030.0],"6":[242872.0,9624.0],"7":[114348.43,3614.0],"8":[152938.3,5151.0],"9":[197516.3,6817.0],"10":[155491.52,5471.0],"11":[109149.06,3463.0],"12":[70714.96,1925.0]},"2026":{"1":[73560.72,2122.0],"2":[57296.6,1584.0],"3":[39240.52,1144.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Formulários / Gráficos":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2025":{"1":[7875.91,992.0],"2":[0.0,0.0],"3":[1072.4,16.0],"4":[364.75,69.0],"5":[1584.14,91.0],"6":[352.0,54.0],"7":[872.45,129.0],"8":[0.0,0.0],"9":[222.25,41.0],"10":[0.0,0.0],"11":[855.3,248.0],"12":[4380.0,14.0]},"2026":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Gêneros Alimentícios":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2025":{"1":[1137342.29,780763.0],"2":[943776.3,597256.0],"3":[815888.51,574465.0],"4":[1034910.82,670285.0],"5":[1099447.96,888406.0],"6":[960544.66,768740.0],"7":[1048734.04,747719.0],"8":[1054659.73,834077.0],"9":[948672.47,748760.0],"10":[1119597.29,867347.0],"11":[865821.53,617422.0],"12":[750885.24,498356.0]},"2026":{"1":[618603.78,438996.0],"2":[564423.69,302450.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Imobilizado/Ativo Fixo":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2025":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[1305.0,5.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2026":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Materiais Médicos":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[2846246.29,2439018.0],"4":[4231804.77,3266151.0],"5":[2316893.49,1972251.0],"6":[1937628.1,1854702.0],"7":[2804967.21,2573519.0],"8":[3380261.96,2950861.0],"9":[2753750.37,2109297.0],"10":[2537007.51,2057180.0],"11":[2683482.29,1917567.0],"12":[3042974.18,2331016.0]},"2025":{"1":[3950591.02,2929120.0],"2":[2213072.36,1925086.0],"3":[2670451.85,1826770.0],"4":[2777298.24,2196117.0],"5":[2911915.9,2277770.0],"6":[2225651.69,2309115.0],"7":[2182420.11,1758492.0],"8":[2752279.16,2275656.0],"9":[2857308.58,2554843.0],"10":[3154129.51,2373845.0],"11":[2368040.03,2046604.0],"12":[1253101.68,1404465.0]},"2026":{"1":[1369642.86,1090750.0],"2":[1713438.25,1527104.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Materiais de Escritório e Informática":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2025":{"1":[200238.28,19880.0],"2":[71815.5,3300.0],"3":[159940.55,3933.0],"4":[115975.09,14802.0],"5":[173773.61,14840.0],"6":[145919.05,12201.0],"7":[92783.61,8959.0],"8":[130456.85,9124.0],"9":[130866.23,20535.0],"10":[142049.87,13037.0],"11":[134914.96,12926.0],"12":[59498.0,1938.0]},"2026":{"1":[78693.8,5150.0],"2":[23066.3,2415.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Materiais de Limpeza / Descartáveis":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2025":{"1":[915692.1,347385.0],"2":[790260.47,744459.0],"3":[333996.7,277944.0],"4":[634071.21,402492.0],"5":[727698.2,337637.0],"6":[512177.0,406900.0],"7":[713591.98,535387.0],"8":[622411.2,299883.0],"9":[1005662.63,470610.0],"10":[1111216.3,340855.0],"11":[934839.73,367864.0],"12":[440018.1,132144.0]},"2026":{"1":[338837.99,175114.0],"2":[224204.44,116735.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Medicamentos":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[4032184.31,586985.0],"4":[4841553.66,959461.0],"5":[4210443.44,990698.0],"6":[2508856.38,536100.0],"7":[3672426.83,921016.0],"8":[4442715.61,856695.0],"9":[3527378.21,829918.0],"10":[3872511.5,757546.0],"11":[2682559.3,583106.0],"12":[3143255.68,748469.0]},"2025":{"1":[2805608.76,820060.0],"2":[2316466.17,408896.0],"3":[2195022.6,478304.0],"4":[2669392.84,606302.0],"5":[3061700.26,543622.0],"6":[3509033.92,540009.0],"7":[2917994.7,628357.0],"8":[2442354.08,579168.0],"9":[3116787.84,588273.0],"10":[2958665.95,722123.0],"11":[2862592.53,558554.0],"12":[2681200.27,210708.0]},"2026":{"1":[2324930.88,413830.0],"2":[1858729.73,374318.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Rouparia / Tecidos":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2025":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[8900.0,260.0],"5":[44210.0,3250.0],"6":[10785.0,150.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2026":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}},"Uniforme e Epis":{"2024":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2025":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[8717.84,116.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]},"2026":{"1":[0.0,0.0],"2":[0.0,0.0],"3":[0.0,0.0],"4":[0.0,0.0],"5":[0.0,0.0],"6":[0.0,0.0],"7":[0.0,0.0],"8":[0.0,0.0],"9":[0.0,0.0],"10":[0.0,0.0],"11":[0.0,0.0],"12":[0.0,0.0]}}},"prods":[{"p":"LUVA DE PROCEDIMENTO LÁTEX COM PÓ - M","c":"Materiais Médicos","v":3769888.76,"q":18673100.0,"n":24,"pct":2.29},{"p":"KIT LP16 - USO GERAL (LP16) - PACOTE","c":"Materiais Médicos","v":2099520.0,"q":29160.0,"n":42,"pct":1.28},{"p":"CEFTAZIDIMA + AVIBACTAM 2,5G (TORGENA)","c":"Medicamentos","v":2086343.41,"q":2880.0,"n":22,"pct":1.27},{"p":"PIPERACILINA + TAZOBACTAM FRASCO 4,5G (TAZOCIN)","c":"Medicamentos","v":1869699.4,"q":124520.0,"n":21,"pct":1.14},{"p":"PEMBROLIZUMABE 25MG/ML FRASCO-AMPOLA 4ML (KEYTRUDA)","c":"Medicamentos","v":1743315.16,"q":98.0,"n":17,"pct":1.06},{"p":"AVENTAL DESCART MANGA LONGA/PUNHO MALHA 30GR","c":"Materiais Médicos","v":1707832.52,"q":529250.0,"n":24,"pct":1.04},{"p":"EQUIPO PARENTERAL P/BOMBA INFUSORA (REF. 441702P)","c":"Materiais Médicos","v":1689927.0,"q":82320.0,"n":23,"pct":1.03},{"p":"PERTUZUMABE 30MG/ML FRASCO-AMPOLA 14ML (PERJETA)","c":"Medicamentos","v":1567838.58,"q":107.0,"n":16,"pct":0.95},{"p":"ENOXAPARINA SODICA 40MG 0,4ML (CLEXANE) (M.A.R)","c":"Medicamentos","v":1549670.18,"q":126504.0,"n":21,"pct":0.94},{"p":"SORO FISIOLOGICO 0.9% 250 ML SISTEMA FECHADO (REF. 200112) - FRASCO","c":"Medicamentos","v":1485469.2,"q":401808.0,"n":20,"pct":0.9},{"p":"IMUNOGLOBULINA HUMANA FRASCO/AMPOLA 5G","c":"Medicamentos","v":1351087.02,"q":737.0,"n":14,"pct":0.82},{"p":"PAPEL TOALHA INTERFOLHA - FARDO C/1000 FOLHAS","c":"Materiais de Limpeza / Descartáveis","v":1252480.0,"q":121600.0,"n":14,"pct":0.76},{"p":"ANFOTERICINA B LIPOSOMAL FRASCO 50MG/10ML (AMBISOME)","c":"Medicamentos","v":1248380.0,"q":660.0,"n":8,"pct":0.76},{"p":"CATETER TRIPLO LUMEN","c":"Materiais Médicos","v":1238520.52,"q":9260.0,"n":24,"pct":0.75},{"p":"MEROPENEM FRASCO 1G (MERONEM)","c":"Medicamentos","v":1137647.1,"q":78550.0,"n":19,"pct":0.69},{"p":"CLORIDRATO DE ESCETAMINA 140MG/ML (SPRAVATO)","c":"Medicamentos","v":1114772.0,"q":458.0,"n":8,"pct":0.68},{"p":"COMPRESSA CIRURGICA C/RX 45X50 ( 25X28 ) ESTERIL C/5","c":"Materiais Médicos","v":1101816.2,"q":237397.0,"n":32,"pct":0.67},{"p":"KIT DESCARTAVEL HIGIENIZAÇÃO","c":"Materiais Médicos","v":1077615.0,"q":239470.0,"n":24,"pct":0.66},{"p":"SORO FISIOLOGICO 0,9% 250 ML - S.FECHADO","c":"Medicamentos","v":998468.5,"q":260040.0,"n":36,"pct":0.61},{"p":"CAPOTE CIRURGICO ESTERIL DESCARTAVEL (A3SMS)","c":"Materiais Médicos","v":975086.75,"q":81325.0,"n":41,"pct":0.59},{"p":"PANTOPRAZOL 40MG AMPOLA (PANTOZOL)","c":"Medicamentos","v":961893.1,"q":122270.0,"n":21,"pct":0.59},{"p":"TRASTUZUMABE DERUXTECAN 100MG FRASCO-AMPOLA","c":"Medicamentos","v":916560.0,"q":59.0,"n":6,"pct":0.56},{"p":"EQUIPO COMUM C/INJETOR LATERAL (INTRAFIX PRIMELINE)","c":"Materiais Médicos","v":893688.51,"q":280975.0,"n":32,"pct":0.54},{"p":"ALBUMINA HUMANA 20% FRASCO 50ML","c":"Medicamentos","v":881776.0,"q":5470.0,"n":23,"pct":0.54},{"p":"LIBTAYO 350MG ( CEMIPLIMABE )","c":"Medicamentos","v":859970.47,"q":19.0,"n":15,"pct":0.52},{"p":"CONJUNTO CALÇA E JALECO TNT AZ TAM M (CJMTA)","c":"Materiais Médicos","v":858710.0,"q":99850.0,"n":24,"pct":0.52},{"p":"TRASTUZUMABE DERUXTECAN 100MG FRASCO-AMPOLA (ENHERTU)","c":"Medicamentos","v":842809.57,"q":52.0,"n":9,"pct":0.51},{"p":"PATINHO BOVINO RESFRIADO - QUILO","c":"Gêneros Alimentícios","v":812899.26,"q":24345.0,"n":14,"pct":0.49},{"p":"TOALHA MULTIUSO (COMPRESSA NWV 0,25X0,30)","c":"Materiais Médicos","v":806769.0,"q":4745700.0,"n":43,"pct":0.49},{"p":"SEVOFLURANO 250 ML (SEVORANE) - FRASCO","c":"Medicamentos","v":801433.32,"q":2291.0,"n":29,"pct":0.49},{"p":"DARATUMUMABE 20 MG/ML FRASCO-AMPOLA 20 ML - FRASCO AMPOLA","c":"Medicamentos","v":796975.55,"q":96.0,"n":16,"pct":0.49},{"p":"CONJUNTO CALÇA JALECO TNT AZ TAM G(CJGTA)","c":"Materiais Médicos","v":795822.0,"q":90440.0,"n":24,"pct":0.48},{"p":"SORO FISIOLOGICO 0.9% 100 ML SISTEMA FECHADO (REF. 200111) - FRASCO","c":"Medicamentos","v":768179.6,"q":271906.0,"n":18,"pct":0.47},{"p":"COMPRESSA CAMPO OPERATORIO ESTÉRIL 25X28CM C/RX","c":"Materiais Médicos","v":762159.36,"q":159572.0,"n":24,"pct":0.46},{"p":"FILÉ DE FRANGO SEM OSSO - KILO","c":"Gêneros Alimentícios","v":715706.08,"q":43340.0,"n":14,"pct":0.44},{"p":"INFUSOMAT COMPACT PLUS (BOMBA INFUSORA)","c":"Materiais Médicos","v":690253.94,"q":33790.0,"n":22,"pct":0.42},{"p":"NUTRIFLEX LIPID PLUS 1875ML","c":"Medicamentos","v":687335.74,"q":2100.0,"n":23,"pct":0.42},{"p":"TRASTUZUMABE ENTASINA 160MG FRASCO-AMPOLA (KADCYLA)","c":"Medicamentos","v":687140.26,"q":50.0,"n":14,"pct":0.42},{"p":"SORO FISIOLOGICO 0.9% 500 ML SISTEMA FECHADO (REF. 200114) - FRASCO","c":"Medicamentos","v":682282.4,"q":164532.0,"n":19,"pct":0.42},{"p":"CONJUNTO CALÇA E JALECO TNT AZ TAM GG (CJGGTA)","c":"Materiais Médicos","v":648810.0,"q":72900.0,"n":24,"pct":0.39},{"p":"NIVOLUMAB 10MG/ML FRASCO-AMPOLA 10ML (OPDIVO) - FRASCO","c":"Medicamentos","v":629390.14,"q":82.0,"n":13,"pct":0.38},{"p":"MICROPORE 50 X 10M (3M) - ROLO","c":"Materiais Médicos","v":629330.84,"q":56824.0,"n":24,"pct":0.38},{"p":"KIT MONITORIZACAO P/PAM","c":"Materiais Médicos","v":628728.4,"q":8037.0,"n":24,"pct":0.38},{"p":"SEVOFLURANO FRASCO 250ML (SEVORANE)","c":"Medicamentos","v":613623.64,"q":1747.0,"n":22,"pct":0.37},{"p":"PEMBROLIZUMABE 25MG/ML 4ML FRASCO-AMPOLA","c":"Medicamentos","v":600078.6,"q":36.0,"n":6,"pct":0.37},{"p":"CAFÉ MELITA TRADICIONAL - PACOTE 1KG","c":"Gêneros Alimentícios","v":597223.7,"q":8565.0,"n":14,"pct":0.36},{"p":"USTEQUINUMABE IV 130MG/26ML (STELARA)","c":"Medicamentos","v":584787.18,"q":17.0,"n":6,"pct":0.36},{"p":"COMPRESSA GAZE NÃO ESTERIL 7.5 X 7.5CM C/500 - PACOTE","c":"Materiais Médicos","v":570896.68,"q":52373.0,"n":24,"pct":0.35},{"p":"EQUIPO P/BOMBA EUROFIX COMPACT AIR B.BRAUN","c":"Materiais Médicos","v":558608.8,"q":27220.0,"n":23,"pct":0.34},{"p":"SORO FISIOLOGICO 0,9% 500 ML - S.FECHADO","c":"Medicamentos","v":551006.2,"q":128360.0,"n":35,"pct":0.34},{"p":"SORO FISIOLOGICO 0,9% 100 ML S.FECHADO","c":"Medicamentos","v":549216.9,"q":195400.0,"n":17,"pct":0.33},{"p":"SORO RINGER C/LACTATO 500 ML SISTEMA FECHADO (REF. 200164) - FRASCO","c":"Medicamentos","v":533796.8,"q":123250.0,"n":22,"pct":0.32},{"p":"CEFUROXIMA 750MG FRASCO/AMPOLA (ZINACEF)","c":"Medicamentos","v":533016.95,"q":71450.0,"n":25,"pct":0.32},{"p":"FITA P/GLICEMIA","c":"Materiais Médicos","v":532200.5,"q":937050.0,"n":47,"pct":0.32},{"p":"PERNEIRA COMPRESSORA DESCARTÁVEL ATE COXA TAM. M (LABTEK/KENDALL) - PAR","c":"Materiais Médicos","v":531550.0,"q":2166.0,"n":20,"pct":0.32},{"p":"SUGAMADEX SÓDICO FRASCO-AMPOLA 100 MG/ML (BRIDION)","c":"Medicamentos","v":508006.0,"q":12260.0,"n":21,"pct":0.31},{"p":"LEITE LONGA VIDA INTEGRAL","c":"Gêneros Alimentícios","v":504173.34,"q":109876.0,"n":28,"pct":0.31},{"p":"LAGARTO PLANO BOVINO RESFRIADO - QUILO","c":"Gêneros Alimentícios","v":493905.87,"q":15689.0,"n":14,"pct":0.3},{"p":"SACO DE LIXO AZUL DE 200L PACOTE C/100","c":"Materiais de Limpeza / Descartáveis","v":493588.0,"q":7300.0,"n":9,"pct":0.3},{"p":"AGUA BI - DESTILADA 10 ML - AMPOLA","c":"Medicamentos","v":492390.9,"q":2239400.0,"n":68,"pct":0.3},{"p":"PAPEL A4 - RESMA","c":"Materiais de Escritório e Informática","v":488361.0,"q":21970.0,"n":11,"pct":0.3},{"p":"EQUIPO INTRAFIX AIR C/INJETOR LATERAL (SIMPLES)","c":"Materiais Médicos","v":483942.54,"q":152780.0,"n":22,"pct":0.29},{"p":"ENOXAPARINA SODICA 20MG 0,2ML (CLEXANE) (M.A.R)","c":"Medicamentos","v":483735.6,"q":45034.0,"n":21,"pct":0.29},{"p":"EQUIPO ENTERAL MULTISPIKE S P/BOMBA INFUSORA (REF. 402113P)","c":"Materiais Médicos","v":482953.6,"q":35660.0,"n":22,"pct":0.29},{"p":"INVEGA SUSTENNA SERINGA 1,5ML","c":"Medicamentos","v":478179.0,"q":201.0,"n":6,"pct":0.29},{"p":"SORO RINGER C/LACTATO FRASCO 500ML S.FECHADO","c":"Medicamentos","v":466274.0,"q":104100.0,"n":21,"pct":0.28},{"p":"AMOXICILINA + CLAV DE POTASSIO 1G FRASCO (CLAVULIN)","c":"Medicamentos","v":464291.4,"q":47840.0,"n":19,"pct":0.28},{"p":"SOBRECOXA DE FRANGO - KILO","c":"Gêneros Alimentícios","v":461638.58,"q":47259.0,"n":14,"pct":0.28},{"p":"SACO DE LIXO VERDE 100 LTS PACOTE C/100","c":"Materiais de Limpeza / Descartáveis","v":449964.0,"q":14400.0,"n":10,"pct":0.27},{"p":"DARATUMUMABE 20 MG/ML 20 ML FRASCO-AMPOLA","c":"Medicamentos","v":443424.0,"q":55.0,"n":6,"pct":0.27},{"p":"ALTEPLASE FRASCO/AMPOLA 50MG (ACTILYSE) (M.A.R)","c":"Medicamentos","v":438403.72,"q":168.0,"n":18,"pct":0.27},{"p":"FRESUBIN HP ENERGY 1000ML","c":"Dieta Enteral","v":433044.0,"q":9414.0,"n":9,"pct":0.26},{"p":"PERNEIRA COMPRESSORA MMII TAM. M (LABTEK/KENDALL)","c":"Materiais Médicos","v":414625.0,"q":1688.0,"n":20,"pct":0.25},{"p":"FRESUBIN HP ENERGY  1000ML","c":"Dieta Enteral","v":414000.0,"q":9200.0,"n":6,"pct":0.25},{"p":"CATETER PAM FEMORAL","c":"Materiais Médicos","v":407487.8,"q":3600.0,"n":32,"pct":0.25},{"p":"COPO DESCARTAVEL 200ML","c":"Materiais de Limpeza / Descartáveis","v":404905.0,"q":86150.0,"n":6,"pct":0.25},{"p":"CASSETE 100NX GHS","c":"Materiais Médicos","v":403500.0,"q":538.0,"n":23,"pct":0.25},{"p":"CREME BARREIRA 60G - TUBO","c":"Materiais Médicos","v":401919.62,"q":13193.0,"n":22,"pct":0.24},{"p":"DIPIRONA 500 MG/ML AMPOLA 2 ML (NOVALGINA)","c":"Medicamentos","v":398718.2,"q":689680.0,"n":22,"pct":0.24},{"p":"SORO FISIOLOGICO 0.9% 1000 ML SISTEMA FECHADO (REF. 200115) - FRASCO","c":"Medicamentos","v":392766.9,"q":60330.0,"n":20,"pct":0.24},{"p":"PERNEIRA COMPRESSORA DESCARTÁVEL ATE COXA TAM. G (LABTEK/KENDALL) - PAR","c":"Materiais Médicos","v":378850.0,"q":1535.0,"n":18,"pct":0.23},{"p":"POLIMIXINA B 500.000 UI - FRASCO/AMPOLA (POLYTEK)","c":"Medicamentos","v":374182.82,"q":31325.0,"n":20,"pct":0.23},{"p":"PAPEL HIGIENICO ROLÃO 300MT C/8","c":"Materiais de Limpeza / Descartáveis","v":371316.0,"q":11640.0,"n":14,"pct":0.23},{"p":"PAPEL A 4 - RESMA CHAMEX","c":"Materiais de Escritório e Informática","v":368445.0,"q":16500.0,"n":14,"pct":0.22},{"p":"DURVALUMAB 50MG/ML FRASCO-AMPOLA 10ML","c":"Medicamentos","v":368145.7,"q":27.0,"n":7,"pct":0.22},{"p":"EQUIPO POLIFIX 2 VIAS C/INJETOR (CURTO)","c":"Materiais Médicos","v":367497.16,"q":106150.0,"n":23,"pct":0.22},{"p":"ENOXAPARINA SODICA 60MG 0,6ML (CLEXANE) (M.A.R)","c":"Medicamentos","v":366474.02,"q":21712.0,"n":19,"pct":0.22},{"p":"LP37N/KIT LP37N PARTO NORMAL/GINECO/URO (COM BOLSA )","c":"Materiais Médicos","v":366244.0,"q":4636.0,"n":41,"pct":0.22},{"p":"PIPERACILINA + TAZOBACTAM 4,5G FRASCO-AMPOLA - TAZOCIN","c":"Medicamentos","v":363563.5,"q":25150.0,"n":5,"pct":0.22},{"p":"CANETA DE BISTURI DESCARTAVEL","c":"Materiais Médicos","v":363005.35,"q":37460.0,"n":45,"pct":0.22},{"p":"CONJUNTO CALÇA E JALECO TNT AZ TAM P (CJPTA)","c":"Materiais Médicos","v":362295.0,"q":43650.0,"n":24,"pct":0.22},{"p":"MEXEDOR DE SUCO","c":"Materiais de Limpeza / Descartáveis","v":353095.5,"q":27133.0,"n":18,"pct":0.21},{"p":"SACO DE LIXO TRANSPARENTE 200 LTS PACT C/100","c":"Materiais de Limpeza / Descartáveis","v":351260.0,"q":4970.0,"n":9,"pct":0.21},{"p":"PERTUZUMABE 30MG/ML 14ML FRASCO-AMPOLA","c":"Medicamentos","v":349920.0,"q":25.0,"n":5,"pct":0.21},{"p":"SENSOR BIS QUATRO E - BIS","c":"Materiais Médicos","v":348800.0,"q":1744.0,"n":22,"pct":0.21},{"p":"FRESUBIN HP ENERGY 1000ML","c":"Medicamentos","v":347335.12,"q":5552.0,"n":8,"pct":0.21},{"p":"RESOURCE THICKEN UP CLEAR 1,2G","c":"Medicamentos","v":346232.98,"q":103572.0,"n":22,"pct":0.21},{"p":"CATETER INTRAVENOSO N 22 C/DISPOSITIVO DE SEGURANÇA (REF. 4251628 - 04)","c":"Materiais Médicos","v":343117.0,"q":132750.0,"n":42,"pct":0.21},{"p":"CIPROFLOXACINA 200 MG/100 ML (CIPRO)","c":"Medicamentos","v":339322.09,"q":49940.0,"n":22,"pct":0.21},{"p":"EQUIPO POLIFIX 2 VIAS C/INJETOR (LONGO)","c":"Materiais Médicos","v":336327.16,"q":84840.0,"n":20,"pct":0.2},{"p":"CEFAZOLINA FRASCO/AMPOLA 1G (KEFAZOL)","c":"Medicamentos","v":334368.72,"q":83650.0,"n":22,"pct":0.2},{"p":"SACO DE LIXO VERDE 60 LTS PACOTE C/100","c":"Materiais de Limpeza / Descartáveis","v":328980.0,"q":20150.0,"n":12,"pct":0.2},{"p":"CEFTAZIDIMA + AVIBACTAM 2000MG + 500MG FRASCO-AMPOLA - TORGENA","c":"Medicamentos","v":322845.0,"q":380.0,"n":2,"pct":0.2},{"p":"ENOXAPARINA 40MG SERINGA 0,4ML - CLEXANE","c":"Medicamentos","v":322460.0,"q":25000.0,"n":4,"pct":0.2},{"p":"DURVALUMAB 50MG/ML 10ML FRASCO-AMPOLA","c":"Medicamentos","v":320892.49,"q":24.0,"n":4,"pct":0.2},{"p":"ÁGUA MINERAL - 1.5L","c":"Gêneros Alimentícios","v":314490.8,"q":159640.0,"n":17,"pct":0.19},{"p":"MEROPENEM IV 1G FRASCO-AMPOLA - MERONEM","c":"Medicamentos","v":311230.0,"q":21000.0,"n":6,"pct":0.19},{"p":"RESTRITOR P/PÉS E MAOS","c":"Materiais Médicos","v":310550.0,"q":21970.0,"n":47,"pct":0.19},{"p":"COPO DESCARTAVEL 200ML - PACOTE","c":"Materiais de Limpeza / Descartáveis","v":306307.75,"q":63020.0,"n":14,"pct":0.19},{"p":"TRIPTORRELINA 11,25MG FRASCO-AMPOLA","c":"Medicamentos","v":304246.06,"q":333.0,"n":23,"pct":0.19},{"p":"FIXADOR DE TUBO ENDOTRAQUEAL","c":"Materiais Médicos","v":302802.5,"q":25025.0,"n":31,"pct":0.18},{"p":"CL DE ESCETAMINA 140MG/ML (SPRAVATO)","c":"Medicamentos","v":302723.2,"q":130.0,"n":2,"pct":0.18},{"p":"REFIL 4 DIVISOES","c":"Materiais de Limpeza / Descartáveis","v":302548.8,"q":511000.0,"n":21,"pct":0.18},{"p":"FILE DE FRANGO SEM OSSO - KILO","c":"Gêneros Alimentícios","v":301284.11,"q":18609.0,"n":14,"pct":0.18},{"p":"EQUIPO BOMBA INFUSOMAT PLUS SET AIR RF:441702PL - CTI","c":"Materiais Médicos","v":299588.0,"q":14864.0,"n":16,"pct":0.18},{"p":"LP45/KIT LP45 ARTROSCOPIA","c":"Materiais Médicos","v":298328.0,"q":3560.0,"n":36,"pct":0.18},{"p":"INVEGA SUSTENNA SERINGA 1ML","c":"Medicamentos","v":294996.0,"q":124.0,"n":6,"pct":0.18},{"p":"FILÉ DE PEITO DE FRANGO","c":"Gêneros Alimentícios","v":294710.42,"q":17932.0,"n":14,"pct":0.18},{"p":"FENTANILA 0.05MG/ML 10 ML (FENTANIL) - FRASCO AMPOLA","c":"Medicamentos","v":287143.02,"q":80325.0,"n":29,"pct":0.17},{"p":"COMPRESSA GAZE ESTÉRIL 7.5 X 7.5CM 13 FIOS C/10 - PACOTE","c":"Materiais Médicos","v":281229.23,"q":637329.0,"n":24,"pct":0.17},{"p":"DUPILUMABE 200MG | SERINGA","c":"Medicamentos","v":279921.78,"q":62.0,"n":4,"pct":0.17},{"p":"KIT LP16 - USO GERAL (LP16)","c":"Materiais Médicos","v":279216.0,"q":3878.0,"n":15,"pct":0.17},{"p":"DEXMEDETOMIDINA 100MCG/ML 2ML (PRECEDEX)","c":"Medicamentos","v":274556.3,"q":42470.0,"n":21,"pct":0.17},{"p":"TRASTUZUMABE 440 MG - (ZEDORA) - FRASCO AMPOLA","c":"Medicamentos","v":273941.38,"q":101.0,"n":9,"pct":0.17},{"p":"DIBEN 1.5 KCAL HP 1000ML","c":"Dieta Enteral","v":273028.32,"q":5016.0,"n":14,"pct":0.17},{"p":"ROCURONIO BROMETO FRASCO/AMPOLA 50MG/5ML (ESMERON)","c":"Medicamentos","v":272504.32,"q":29600.0,"n":21,"pct":0.17},{"p":"CATETER PAM FEMORAL 20G X 160MM (REF.5206332)","c":"Materiais Médicos","v":272358.4,"q":2330.0,"n":16,"pct":0.17},{"p":"CLARITROMICINA 500 MG (KLARICID) - FRASCO AMPOLA","c":"Medicamentos","v":266177.5,"q":11375.0,"n":17,"pct":0.16},{"p":"NUTRIFLEX LIPID SPECIAL 1875ML","c":"Medicamentos","v":265261.77,"q":685.0,"n":19,"pct":0.16},{"p":"POLENGUINHO LIGHT","c":"Gêneros Alimentícios","v":264417.61,"q":284976.0,"n":28,"pct":0.16},{"p":"FILE DE PEIXE PANGA KILO","c":"Gêneros Alimentícios","v":260278.39,"q":10789.0,"n":14,"pct":0.16},{"p":"PANTOPRAZOL 40MG FRASCO-AMPOLA","c":"Medicamentos","v":253238.6,"q":39500.0,"n":5,"pct":0.15},{"p":"DRENO BLAKE 19FR (REDONDO)","c":"Materiais Médicos","v":250242.64,"q":1308.0,"n":21,"pct":0.15},{"p":"CATETER DUPLO LUMEN 7FR 20CM","c":"Materiais Médicos","v":248500.98,"q":3070.0,"n":22,"pct":0.15},{"p":"CURATIVO POLYMEM 9 X 9 = 10 X 10","c":"Materiais Médicos","v":245445.44,"q":5430.0,"n":43,"pct":0.15},{"p":"FRESUBIN HP ENERGY 500ML","c":"Dieta Enteral","v":244992.0,"q":7985.0,"n":15,"pct":0.15},{"p":"LAMINA LARINGO Nº 4 (MACGRATH)","c":"Materiais Médicos","v":242101.9,"q":2054.0,"n":25,"pct":0.15},{"p":"USTEQUINUMABE 90MG/ML","c":"Medicamentos","v":241890.0,"q":10.0,"n":4,"pct":0.15},{"p":"INVEGA TRINZA SERINGA 2,625ML","c":"Medicamentos","v":241688.44,"q":28.0,"n":6,"pct":0.15},{"p":"CEMIPLIMABE 350MG FRASCO-AMPOLA","c":"Medicamentos","v":241430.25,"q":6.0,"n":5,"pct":0.15},{"p":"VANCOMICINA 500 MG (VANCOCID) - FRASCO AMPOLA","c":"Medicamentos","v":241166.68,"q":47745.0,"n":31,"pct":0.15},{"p":"PERFEX 30 X 300M - ROLO","c":"Materiais de Limpeza / Descartáveis","v":238858.0,"q":2230.0,"n":10,"pct":0.15},{"p":"OXACILINA 500 MG - FRASCO AMPOLA","c":"Medicamentos","v":237935.24,"q":58600.0,"n":52,"pct":0.14},{"p":"SERINGA DESCARTAVEL S/AGULHA 10ML","c":"Materiais Médicos","v":234138.21,"q":1138862.0,"n":24,"pct":0.14},{"p":"GOLIMUMABE 12,5MG/ML FRASCO-AMPOLA 4ML - (SIMPONI)","c":"Medicamentos","v":229698.63,"q":41.0,"n":12,"pct":0.14},{"p":"SURGICEL 5 X 7 CM","c":"Materiais Médicos","v":228176.0,"q":1948.0,"n":19,"pct":0.14},{"p":"SUCCAO SAFELINER REFIL 3000ML ( FIT FIX )","c":"Materiais Médicos","v":228015.0,"q":11550.0,"n":31,"pct":0.14},{"p":"FIO MONOCRYL 3 - 0 AG. 1.9CM (Y 427 G)","c":"Materiais Médicos","v":227100.0,"q":15504.0,"n":24,"pct":0.14},{"p":"SORO FISIOLOGICO 0,9% FRASCO 1000ML S.FECHADO","c":"Medicamentos","v":224478.6,"q":33310.0,"n":18,"pct":0.14},{"p":"INDICADOR BIOLÓGICO BIONOVA 3 HORAS - CAIXA C/50UND","c":"Materiais Médicos","v":222176.5,"q":12350.0,"n":23,"pct":0.14},{"p":"CETOPROFENO 100 MG/2ML I.V. (PROFENID) - FRASCO AMPOLA","c":"Medicamentos","v":222114.46,"q":61950.0,"n":23,"pct":0.14},{"p":"MANTEIGA SEM SAL INDIVIDUAL SACHÊ C/10 GR","c":"Gêneros Alimentícios","v":221071.97,"q":348672.0,"n":14,"pct":0.13},{"p":"PROPOFOL 1% 20 ML (DIPRIVAN) - AMPOLA","c":"Medicamentos","v":219672.68,"q":24755.0,"n":23,"pct":0.13},{"p":"SACO PLASTICO 50 X 70 TRANSPARENTE KG","c":"Materiais de Limpeza / Descartáveis","v":218540.0,"q":7850.0,"n":10,"pct":0.13},{"p":"FIBRINOGÉNIO HUMANO FRASCO 2GR (HAEMOCOMPLETTAN)","c":"Medicamentos","v":217654.39,"q":55.0,"n":7,"pct":0.13},{"p":"ENOXAPARINA SODICA 80MG 0,8ML (CLEXANE) (M.A.R)","c":"Medicamentos","v":216111.14,"q":10380.0,"n":20,"pct":0.13},{"p":"CATETER INTRAVENOSO Nº 20 C/DISPOSITIVO DE SEGURANÇA (REF. 4251644 - 04)","c":"Materiais Médicos","v":216107.11,"q":83750.0,"n":23,"pct":0.13},{"p":"CMG S/CAMPO MESA AUXILIAR","c":"Materiais Médicos","v":213791.4,"q":20169.0,"n":24,"pct":0.13},{"p":"LP37/KITLP37/PARTO NORMAL/GINECO/URO (COM BOLSA )","c":"Materiais Médicos","v":212431.0,"q":2689.0,"n":18,"pct":0.13},{"p":"MEXEDOR DE SUCO 500 UNIDADES","c":"Materiais de Limpeza / Descartáveis","v":208497.5,"q":25068.0,"n":13,"pct":0.13},{"p":"CARNE MOÍDA BOVINA DE PRIMEIRA - QUILO","c":"Gêneros Alimentícios","v":207368.36,"q":9088.0,"n":14,"pct":0.13},{"p":"DUPILUMABE 300MG | SERINGA","c":"Medicamentos","v":206968.0,"q":46.0,"n":4,"pct":0.13},{"p":"FRALDA BIGFRAL AMARELA ESPECIAL XG 150 CM","c":"Materiais Médicos","v":206233.36,"q":59876.0,"n":24,"pct":0.13},{"p":"TRASTUZUMABE ENTASINA 160MG FRASCO-AMPOLA","c":"Medicamentos","v":201648.77,"q":15.0,"n":6,"pct":0.12},{"p":"COMPRESSA GAZE 7,5X7,5CM (PACOTE C/10 ) ESTERIL","c":"Materiais Médicos","v":200018.16,"q":456186.0,"n":21,"pct":0.12},{"p":"SERINGA DESCARTAVEL S/AGULHA 20ML","c":"Materiais Médicos","v":199514.95,"q":646950.0,"n":23,"pct":0.12},{"p":"CATETER PAM RADIAL 20G 80MM","c":"Materiais Médicos","v":197314.6,"q":1610.0,"n":21,"pct":0.12},{"p":"CATETER INTRAVENOSO C/DISPOSITIVO DE SEGURANÇA Nº22G (REF.4251628 - 04)","c":"Materiais Médicos","v":197220.08,"q":75100.0,"n":23,"pct":0.12},{"p":"CANETA P/MARCACAO CIRURGICA PONTA REGULAR","c":"Materiais Médicos","v":195744.5,"q":18405.0,"n":22,"pct":0.12},{"p":"PROPOFOL 1% FRASCO 50ML (DIPRIVAN)","c":"Medicamentos","v":193638.72,"q":4603.0,"n":22,"pct":0.12},{"p":"ESCOVA DE DEGERMAÇAO C/CLOREXIDINA","c":"Materiais Médicos","v":193031.8,"q":124552.0,"n":24,"pct":0.12},{"p":"AMOXICILINA + CLAVULANATO IV 1000MG+200MG - CLAVULIN","c":"Medicamentos","v":192640.0,"q":20000.0,"n":6,"pct":0.12},{"p":"KIT DESJEJUM","c":"Materiais de Limpeza / Descartáveis","v":191743.4,"q":428000.0,"n":14,"pct":0.12},{"p":"TOUCA DESCARTAVEL","c":"Materiais Médicos","v":191704.93,"q":1361800.0,"n":35,"pct":0.12},{"p":"CIDEX OPA (SOLUCAO ORTOFTALALDEIDO) 3.78L - GALAO","c":"Materiais Médicos","v":188438.27,"q":619.0,"n":23,"pct":0.11},{"p":"ABEMACICLIBE 150MG | COMPRIMIDO","c":"Medicamentos","v":187458.34,"q":720.0,"n":4,"pct":0.11},{"p":"PERNEIRA COMPRESSORA DESCARTÁVEL ATE COXA TAM. P (LABTEK/KENDALL) - PAR","c":"Materiais Médicos","v":185800.0,"q":760.0,"n":20,"pct":0.11},{"p":"IOPROMIDA 769MG FRASCO (ULTRAVIST 370MG/50ML)","c":"Medicamentos","v":185147.9,"q":570.0,"n":3,"pct":0.11},{"p":"CIDEX OPA SOLUCAO ORTOFTALALDEIDO 3.78 LTS","c":"Materiais Médicos","v":185146.55,"q":603.0,"n":21,"pct":0.11},{"p":"EQUIPO ENTERALFIX P/BOMBA DE INFUSAO B.BRAUN","c":"Materiais Médicos","v":183496.8,"q":13950.0,"n":18,"pct":0.11},{"p":"TENOXICAN 20 MG ( TILATIL) - FRASCO AMPOLA","c":"Medicamentos","v":182942.48,"q":29150.0,"n":23,"pct":0.11},{"p":"LOMBO SUÍNO CONGELADO - QUILO","c":"Gêneros Alimentícios","v":182500.12,"q":9094.0,"n":14,"pct":0.11},{"p":"CAMPO OPERATORIO ESTERIL 25X28CM [PACOTE C/5 UNIDADE.]","c":"Materiais Médicos","v":180711.28,"q":37860.0,"n":22,"pct":0.11},{"p":"RABADA BOVINA FATIADA - KILO","c":"Gêneros Alimentícios","v":179972.76,"q":7009.0,"n":14,"pct":0.11},{"p":"VEDOLIZUMABE 300MG FRASCO-AMPOLA","c":"Medicamentos","v":179069.07,"q":10.0,"n":7,"pct":0.11},{"p":"DETERGENTE ALCALINO 5 LITROS (TECPON CLEAN)","c":"Materiais Médicos","v":178276.65,"q":784.0,"n":24,"pct":0.11},{"p":"NOREPINEFRINA 8MG/4 ML - AMPOLA","c":"Medicamentos","v":177215.99,"q":118800.0,"n":31,"pct":0.11},{"p":"VENETOCLAX - TRATAMENTO INICIAL (VENCLEXTA) - COMPRIMIDO","c":"Medicamentos","v":177117.46,"q":480.0,"n":2,"pct":0.11},{"p":"MIDAZOLAM 50 MG 10 ML (DORMONID) - AMPOLA","c":"Medicamentos","v":175798.53,"q":64450.0,"n":24,"pct":0.11},{"p":"ESPONJA HEMOSTÁTICA 5X7.5CM (SURGICEL)","c":"Materiais Médicos","v":175576.0,"q":1580.0,"n":22,"pct":0.11},{"p":"VEDOLIZUMABE 300MG","c":"Medicamentos","v":174190.57,"q":10.0,"n":5,"pct":0.11},{"p":"BOBINA PICOTADA 40 CM X 60 CM","c":"Materiais de Limpeza / Descartáveis","v":171333.0,"q":4390.0,"n":13,"pct":0.1},{"p":"CURATIVO TEGADERM FILM 6 X 7CM (PERIFERICO)","c":"Materiais Médicos","v":168094.38,"q":114000.0,"n":24,"pct":0.1},{"p":"SERINGA DESCARTAVEL 10 ML S/AGULHA","c":"Materiais Médicos","v":167689.92,"q":812150.0,"n":29,"pct":0.1},{"p":"VASOPRESSINA 20UI/ML 1ML (ENCRISE) (M.A.R)","c":"Medicamentos","v":167687.86,"q":6820.0,"n":27,"pct":0.1},{"p":"PALIPERIDONA 100MG/ML 1,5ML 150 (INVEGA SUSTENNA)","c":"Medicamentos","v":166390.8,"q":75.0,"n":2,"pct":0.1},{"p":"QUEIJO MUÇARELA - QUILO","c":"Gêneros Alimentícios","v":165074.36,"q":4585.0,"n":14,"pct":0.1},{"p":"MASCARA DESCARTAVEL COM ELASTICO","c":"Materiais Médicos","v":164850.5,"q":1060850.0,"n":23,"pct":0.1},{"p":"PERNEIRA COMPRESSORA MMII TAM. P (LABTEK/KENDALL)","c":"Materiais Médicos","v":162875.0,"q":663.0,"n":22,"pct":0.1},{"p":"SECUQUIMUMABE 150MG/ML | SERINGA","c":"Medicamentos","v":162243.96,"q":39.0,"n":3,"pct":0.1},{"p":"CURATIVO TEGADERM 10CMX12CM (PUNCAO PROFUNDA)","c":"Materiais Médicos","v":161770.12,"q":34200.0,"n":23,"pct":0.1},{"p":"DIAMAX 200ML","c":"Medicamentos","v":161691.16,"q":11488.0,"n":19,"pct":0.1},{"p":"DARATUMUMABE 20 MG/ML FRASCO-AMPOLA 5 ML - FRASCO AMPOLA","c":"Medicamentos","v":161509.76,"q":76.0,"n":7,"pct":0.1},{"p":"IBRUTINIBE 420MG | COMPRIMIDO","c":"Medicamentos","v":161210.43,"q":120.0,"n":3,"pct":0.1},{"p":"FRALDA GERIATRICA G","c":"Materiais Médicos","v":161042.72,"q":89968.0,"n":3,"pct":0.1},{"p":"DEXTROCETAMINA 50 MG/ML 2ML (KETAMIN) - FRASCO AMPOLA","c":"Medicamentos","v":160782.49,"q":9800.0,"n":22,"pct":0.1},{"p":"ENOXAPARINA SODICA 40 MG 0.4ML (CLEXANE) - SERINGA","c":"Medicamentos","v":160158.76,"q":11480.0,"n":2,"pct":0.1},{"p":"CURATIVO ALGINATO DE CALCIO COM PRATA 10X10CM","c":"Materiais Médicos","v":159619.65,"q":6315.0,"n":23,"pct":0.1},{"p":"SERINGA DESCARTAVEL 20 ML S/AGULHA","c":"Materiais Médicos","v":159013.85,"q":507150.0,"n":28,"pct":0.1},{"p":"PIPERACILINA + TAZOBACTAM 4.5G (TAZOCIN) - FRASCO AMPOLA","c":"Medicamentos","v":158720.0,"q":11000.0,"n":2,"pct":0.1},{"p":"MEROPENEM 1G (MERONEM) - FRASCO AMPOLA","c":"Medicamentos","v":158070.0,"q":10500.0,"n":2,"pct":0.1},{"p":"VASOPRESSINA 20UI/ML 1ML (ENCRISE) - AMPOLA","c":"Medicamentos","v":157650.93,"q":6350.0,"n":28,"pct":0.1},{"p":"PAPEL CREPADO VERDE 1.00 X 1.00 (SMS)","c":"Materiais Médicos","v":157351.3,"q":430.0,"n":3,"pct":0.1},{"p":"SACO DE LIXO INFECTANTE BRANCO DE 100L PACOTE C/100","c":"Materiais de Limpeza / Descartáveis","v":157185.0,"q":3150.0,"n":5,"pct":0.1},{"p":"MARMITA ISOPOR 4 CAVIDADES","c":"Materiais de Limpeza / Descartáveis","v":156394.32,"q":120100.0,"n":14,"pct":0.1},{"p":"CREME BARREIRA TUBO 60G (COMFEEL)","c":"Medicamentos","v":156360.8,"q":5080.0,"n":11,"pct":0.1},{"p":"TECENTRIQ 60MG/ML FRASCO-AMPOLA 20ML - FRASCO AMPOLA","c":"Medicamentos","v":156053.46,"q":6.0,"n":4,"pct":0.09},{"p":"PURILON GEL 15G TB - TUBO","c":"Materiais Médicos","v":155949.8,"q":4850.0,"n":22,"pct":0.09},{"p":"HIDROCORTISONA 100 MG - FRASCO AMPOLA","c":"Medicamentos","v":152043.04,"q":52250.0,"n":38,"pct":0.09},{"p":"OLEO SOJA - LATA 18 L","c":"Gêneros Alimentícios","v":151328.94,"q":922.0,"n":14,"pct":0.09},{"p":"ESPARADRAPO 10CM X 4.5M - ROLO","c":"Materiais Médicos","v":149995.04,"q":17278.0,"n":24,"pct":0.09},{"p":"FIO MONOCRYL 4 - 0 AG. 1.9CM (Y 496 G)","c":"Materiais Médicos","v":148712.4,"q":10236.0,"n":24,"pct":0.09},{"p":"OLAPARIBE 150MG | COMPRIMIDO","c":"Medicamentos","v":147107.33,"q":560.0,"n":4,"pct":0.09},{"p":"ETIQ TÉRMICA 33X21X3 PERSO RL C/7000 UNID","c":"Materiais de Escritório e Informática","v":147000.0,"q":840.0,"n":9,"pct":0.09},{"p":"PALIPERIDONA 100MG/ML 1ML 100MG (INVEGA SUSTENNA)","c":"Medicamentos","v":145361.4,"q":65.0,"n":2,"pct":0.09},{"p":"COMPRESSA DE GAZE N/ESTERIL C/500 FLS","c":"Materiais Médicos","v":145120.2,"q":13826.0,"n":19,"pct":0.09},{"p":"LUVA DE PROCEDIMENTO VINIL TAM. M SEM PÓ","c":"Materiais Médicos","v":144588.05,"q":1005820.0,"n":23,"pct":0.09},{"p":"MUVINLAX SACHES 14G","c":"Medicamentos","v":144081.99,"q":41660.0,"n":21,"pct":0.09},{"p":"ALCOOL 70% TOPICO ALMOTOLIA 100ML - FRASCO","c":"Materiais Médicos","v":143520.12,"q":110714.0,"n":25,"pct":0.09},{"p":"FENTANILA 0.05MG/ML 10 ML (FENTANIL)","c":"Medicamentos","v":143298.47,"q":39550.0,"n":20,"pct":0.09},{"p":"IOPROMIDA 769MG FRASCO (ULTRAVIST 370MG/200ML)","c":"Medicamentos","v":143220.8,"q":250.0,"n":3,"pct":0.09},{"p":"ESCOVA DE DEGERMAÇAO - MARCODINE (C/CLOREXIDINA)","c":"Materiais Médicos","v":142944.81,"q":91888.0,"n":23,"pct":0.09},{"p":"CARNE MOÍDA BOVINA DE PRIMEIRA","c":"Gêneros Alimentícios","v":142543.78,"q":6250.0,"n":14,"pct":0.09},{"p":"CATETER INTRAVENOSO N 24 C/DISPOSITIVO DE SEGURANÇA (REF. 4251601 - 04)","c":"Materiais Médicos","v":141299.03,"q":54300.0,"n":49,"pct":0.09},{"p":"CEFEPIMA 1G (MAXCEF) - FRASCO AMPOLA","c":"Medicamentos","v":140863.15,"q":20050.0,"n":30,"pct":0.09},{"p":"CATETER INTRAVENOSO C/DISPOSITIVO DE SEGURANÇA Nº20G (REF. 4251644 - 04)","c":"Materiais Médicos","v":140790.0,"q":53900.0,"n":22,"pct":0.09},{"p":"EQUIPO COMPAT ELLA SPIKE SET ENFIT","c":"Materiais Médicos","v":140112.0,"q":8340.0,"n":3,"pct":0.09},{"p":"INTEGRADOR QUIMICO CLASSE 5","c":"Materiais Médicos","v":139830.0,"q":362000.0,"n":45,"pct":0.09},{"p":"CLORETO DE SODIO 0.9% 10 ML - AMPOLA","c":"Medicamentos","v":139634.4,"q":622150.0,"n":54,"pct":0.08},{"p":"PONATINIBE 15MG | COMPRIMIDO","c":"Medicamentos","v":139601.43,"q":360.0,"n":4,"pct":0.08},{"p":"NATALIZUMABE 20MG/ML 15ML (TYSABRI) - FRASCO AMPOLA","c":"Medicamentos","v":139572.76,"q":18.0,"n":16,"pct":0.08},{"p":"CARFILZOMIBE 60MG FRASCO-AMPOLA","c":"Medicamentos","v":138764.46,"q":35.0,"n":6,"pct":0.08},{"p":"KIT ALMOÇO","c":"Materiais de Limpeza / Descartáveis","v":137940.4,"q":308500.0,"n":14,"pct":0.08},{"p":"CAFE MELITA TRADICIONAL - PACOTE 1KG","c":"Gêneros Alimentícios","v":136940.8,"q":1967.0,"n":14,"pct":0.08},{"p":"AZACITIDINA 100 MG FRASCO-AMPOLA (WINDUZA) - FRASCO AMPOLA","c":"Medicamentos","v":136866.97,"q":274.0,"n":15,"pct":0.08},{"p":"ARROZ PARBOLIZADO - KILO","c":"Gêneros Alimentícios","v":136790.52,"q":30955.0,"n":12,"pct":0.08},{"p":"CARNE MOIDA BOVINA DE PRIMEIRA - QUILO","c":"Gêneros Alimentícios","v":136378.45,"q":5990.0,"n":14,"pct":0.08},{"p":"METILPREDNISOLONA SUCCIN SÓDIO 125MG (SOLU MEDROL) - FRASCO AMPOLA","c":"Medicamentos","v":136138.36,"q":14450.0,"n":22,"pct":0.08},{"p":"PACOTE DESAFIO P/CICLOS SUBSEQUENTES - PACOTE C/50UND","c":"Materiais Médicos","v":135534.0,"q":19200.0,"n":24,"pct":0.08},{"p":"PROPOFOL 1% FRASCO 20ML (DIPRIVAN)","c":"Medicamentos","v":135045.01,"q":15650.0,"n":21,"pct":0.08},{"p":"MICAFUNGINA 100MG (MYCAMINE)","c":"Medicamentos","v":134523.31,"q":420.0,"n":16,"pct":0.08},{"p":"CGMY/CAMPO MESA MAYO","c":"Materiais Médicos","v":134412.0,"q":14610.0,"n":22,"pct":0.08},{"p":"HEPARINA 5.000UI FRASCO 5ML (LIQUEMINE) - FRASCO","c":"Medicamentos","v":131805.7,"q":8875.0,"n":21,"pct":0.08},{"p":"ELETRODO DESCARTAVEL ADULTO C/GEL","c":"Materiais Médicos","v":130829.14,"q":621750.0,"n":24,"pct":0.08},{"p":"DRENO DE BLAKE 19FR (REDONDO) + RESERVATORIO 100ML","c":"Materiais Médicos","v":130388.0,"q":650.0,"n":19,"pct":0.08},{"p":"FIO MONOCRYL 4 - 0 AG 1,95CM (Y 426H)","c":"Materiais Médicos","v":129775.2,"q":8808.0,"n":24,"pct":0.08},{"p":"PATINHO BOVINO","c":"Gêneros Alimentícios","v":129741.23,"q":3883.0,"n":14,"pct":0.08},{"p":"SORO GLICOSADO 5% 500 ML SISTEMA FECHADO (REF. 200134) - FRASCO","c":"Medicamentos","v":129682.4,"q":31450.0,"n":19,"pct":0.08},{"p":"SOBRECOXA DE FRANGO","c":"Gêneros Alimentícios","v":128727.79,"q":13189.0,"n":14,"pct":0.08},{"p":"INDICADOR BIOLOGICO 15MIN STERRAD","c":"Materiais Médicos","v":128325.0,"q":1770.0,"n":14,"pct":0.08},{"p":"LUVA CIRURGICA ESTÉRIL Nº 7.5 - PAR","c":"Materiais Médicos","v":126217.06,"q":108720.0,"n":23,"pct":0.08},{"p":"CEFTRIAXONA IV 1G FRASCO (ROCEFIN) - FRASCO AMPOLA","c":"Medicamentos","v":124268.65,"q":31550.0,"n":24,"pct":0.08},{"p":"PURILON GEL 15G","c":"Materiais Médicos","v":124101.92,"q":3956.0,"n":18,"pct":0.08},{"p":"BEVACIZUMABE 25 MG/ML FRASCO-AMPOLA 16ML - ELOVIE","c":"Medicamentos","v":123740.95,"q":32.0,"n":7,"pct":0.08},{"p":"CARRÉ SUÍNO FATIADO - KILO","c":"Gêneros Alimentícios","v":122678.63,"q":7057.0,"n":14,"pct":0.07},{"p":"CATETER RADIAL 20G/80MM","c":"Materiais Médicos","v":122484.6,"q":1010.0,"n":17,"pct":0.07},{"p":"GAZE N ADERENTE COM PETROLATUM 7,6 X 7,6CM - ENVELOPE","c":"Materiais Médicos","v":122275.82,"q":29080.0,"n":55,"pct":0.07},{"p":"LEITE LONGA VIDA INTEGRAL = CAIXA DE 1 LITRO","c":"Gêneros Alimentícios","v":122074.07,"q":26365.0,"n":14,"pct":0.07},{"p":"GELEIA SORTIDA","c":"Gêneros Alimentícios","v":121896.59,"q":277640.0,"n":14,"pct":0.07},{"p":"EQUIPO COMUM MACROGOTAS IV COM SUSPIRO","c":"Materiais Médicos","v":121873.4,"q":36920.0,"n":11,"pct":0.07},{"p":"ESCINA SALICITATO DIETILAMONIO GEL 30G (REPARIL) - TUBO","c":"Medicamentos","v":121779.08,"q":5675.0,"n":24,"pct":0.07},{"p":"DIPIRONA 1000MG/2ML AMPOLA - NOVALGINA","c":"Medicamentos","v":121006.0,"q":117600.0,"n":4,"pct":0.07},{"p":"ÁGUA MINERAL GF 1,5L","c":"Gêneros Alimentícios","v":120717.66,"q":61278.0,"n":11,"pct":0.07},{"p":"NOVASOURCE HP 1000ML","c":"Medicamentos","v":120596.23,"q":2593.0,"n":5,"pct":0.07},{"p":"CARNE SECA LAGARTO - QUILO","c":"Gêneros Alimentícios","v":120050.63,"q":3307.0,"n":14,"pct":0.07},{"p":"ERTAPENEM IV FRASCO 1G (INVANZ)","c":"Medicamentos","v":119566.0,"q":715.0,"n":15,"pct":0.07},{"p":"CONJUNTO CALÇA JALECO TNT AZ TAM P","c":"Materiais Médicos","v":118150.5,"q":14235.0,"n":22,"pct":0.07},{"p":"BISCOITO CREAM CRAKER INDIVIDUAL - SACHÊ C/04 UNIDADES","c":"Gêneros Alimentícios","v":117867.21,"q":351000.0,"n":14,"pct":0.07},{"p":"PAPEL HIG. INTERFOLHA","c":"Materiais de Limpeza / Descartáveis","v":117810.0,"q":1530.0,"n":10,"pct":0.07},{"p":"DEXTROCETAMINA CLORIDRATO 50 MG/10 ML (KETAMIN) - FRASCO AMPOLA","c":"Medicamentos","v":117806.69,"q":1625.0,"n":17,"pct":0.07},{"p":"COLETOR DE SECREÇÕES V.A.S. 1000ML","c":"Materiais Médicos","v":117626.88,"q":8207.0,"n":22,"pct":0.07},{"p":"CHA DE DENTRO RESFRIADO - QUILO","c":"Gêneros Alimentícios","v":117453.23,"q":3507.0,"n":14,"pct":0.07},{"p":"FIO VICRYL 3 - 0 AG. 3.0CM (J 406 H)","c":"Materiais Médicos","v":117287.64,"q":11664.0,"n":24,"pct":0.07},{"p":"ADAPTADOR P/SORO","c":"Materiais Médicos","v":116519.14,"q":102060.0,"n":22,"pct":0.07},{"p":"SORO RINGER III 500 ML SIMPLES (REF. 200154) - FRASCO","c":"Medicamentos","v":116346.0,"q":27180.0,"n":22,"pct":0.07},{"p":"SORO GLICOSADO 5% 100 ML - SISTEMA FECHADO (REF. 200131) - FRASCO","c":"Medicamentos","v":115960.75,"q":39266.0,"n":22,"pct":0.07},{"p":"PIPERACILINA + TAZOBACTAM 2.25G (TAZOCIN) - FRASCO AMPOLA","c":"Medicamentos","v":115952.28,"q":8380.0,"n":27,"pct":0.07},{"p":"POLIMIXINA B 500.000 UI - 10ML FRASCO-AMPOLA","c":"Medicamentos","v":115407.2,"q":9500.0,"n":4,"pct":0.07},{"p":"RESTRITOR P/PES E MAOS","c":"Materiais Médicos","v":114990.0,"q":8100.0,"n":30,"pct":0.07},{"p":"COMPRESSA EM NWV 40GR 0,25X0,30 (TM1)","c":"Materiais Médicos","v":113458.0,"q":667400.0,"n":22,"pct":0.07},{"p":"NIVOLUMAB 10MG/ML FRASCO-AMPOLA 4ML (OPDIVO) - FRASCO","c":"Medicamentos","v":113345.05,"q":36.0,"n":10,"pct":0.07},{"p":"TERLIPRESSINA ACETATO AMPOLA 1MG (GLYPRESSIN)","c":"Medicamentos","v":113120.0,"q":428.0,"n":8,"pct":0.07},{"p":"MANTA TÉRMICA MEMBRO INFERIOR ADULTO","c":"Materiais Médicos","v":113050.0,"q":1733.0,"n":21,"pct":0.07},{"p":"KIT DESCARTAVEL DE HIGIENIZACAO (KIT BANHO - ISOTEX)","c":"Materiais Médicos","v":113040.0,"q":25120.0,"n":19,"pct":0.07},{"p":"ACALABRUTINIBE 100MG | COMPRIMIDO","c":"Medicamentos","v":112701.66,"q":240.0,"n":4,"pct":0.07},{"p":"ARROZ PARBOLIZADO - QUILO","c":"Gêneros Alimentícios","v":112259.54,"q":26896.0,"n":16,"pct":0.07},{"p":"RINGER C/LACTATO 500ML FRASCO","c":"Medicamentos","v":111478.8,"q":23600.0,"n":17,"pct":0.07},{"p":"AGULHA DESCARTAVEL 40 X 12","c":"Materiais Médicos","v":110852.25,"q":1664300.0,"n":23,"pct":0.07},{"p":"CATETER PAM FEMORAL 4FR 18GAX12CM","c":"Materiais Médicos","v":110842.8,"q":950.0,"n":17,"pct":0.07},{"p":"TALQUETAMABE 40MG/ML 1 ML (TALVEY) - FRASCO AMPOLA","c":"Medicamentos","v":110778.0,"q":3.0,"n":1,"pct":0.07}],"ent_sec":{"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML":1679996.17,"SUPLEMENTOS":664884.24,"PRODUTOS EM PÓ - LATAS/SACHÊ":13340.0,"DIETAS ENTERAIS PEDIÁTRICAS":8550.0},"ent_monthly":{"2025":{"1":182154.0,"2":242872.0,"3":242872.0,"4":182154.0,"5":303590.0,"6":242872.0,"7":114348.43,"8":152938.3,"9":197516.3,"10":155491.52,"11":109149.06,"12":70714.96},"2026":{"1":73560.72,"2":57296.6,"3":39240.52,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0,"10":0.0,"11":0.0,"12":0.0}},"ent_prods":[{"p":"FRESUBIN HP ENERGY 1000ML","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":433044.0,"q":9414.0},{"p":"FRESUBIN HP ENERGY  1000ML","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":414000.0,"q":9200.0},{"p":"DIBEN 1.5 KCAL HP 1000ML","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":273028.32,"q":5016.0},{"p":"FRESUBIN HP ENERGY 500ML","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":244992.0,"q":7985.0},{"p":"SURVIMED OPD 1000ML","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":89440.0,"q":1352.0},{"p":"FRESUBIN 3.2 KCAL DRINK MANGA 125ml","s":"SUPLEMENTOS","v":79488.0,"q":4968.0},{"p":"FRESUBIN 3.2 KCAL DRINK AVELÃ 125ml","s":"SUPLEMENTOS","v":70656.0,"q":4416.0},{"p":"FRESUBIN 3.2 KCAL DRINK BAUNILHA 125ml","s":"SUPLEMENTOS","v":70656.0,"q":4416.0},{"p":"FRESUBIN PROTEIN ENERGY DRINK AVELÃ 200ML","s":"SUPLEMENTOS","v":49633.92,"q":4080.0},{"p":"FRESUBIN 2KCAL BAUNILHA 200ML","s":"SUPLEMENTOS","v":45705.6,"q":3384.0},{"p":"FRESUBIN 2KCAL FRUTAS DA FLORESTA 200ML","s":"SUPLEMENTOS","v":44712.0,"q":3312.0},{"p":"DIBEN 1.5 KCAL HP 500mlEB","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":44160.0,"q":1380.0},{"p":"RECONVAN 500ML","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":42600.0,"q":1065.0},{"p":"FRESUBIN PROTEIN ENERGY DRINK BAUNILHA 200ML","s":"SUPLEMENTOS","v":42217.92,"q":3480.0},{"p":"DIBEN 1000 EB","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":41580.0,"q":1184.0},{"p":"SURVIMED OPD 500ML","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":40757.85,"q":855.0},{"p":"FRESUBIN 3.2 KCAL DRINK BAUNILHA 125ML","s":"SUPLEMENTOS","v":35992.32,"q":2184.0},{"p":"FRESUBIN 3.2 KCAL DRINK AVELÃ 125ML","s":"SUPLEMENTOS","v":34805.76,"q":2112.0},{"p":"FRESUBIN PROTEIN ENERGY DRINK CAPUCCINO 200ml","s":"SUPLEMENTOS","v":33120.0,"q":2760.0},{"p":"SURVIMED OPD 500 ML","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":31050.0,"q":690.0},{"p":"FRESUBIN PROTEIN ENERGY DRINK FRUTAS VERMELHAS 200ML","s":"SUPLEMENTOS","v":26792.64,"q":2232.0},{"p":"FRESUBIN PROTEIN ENERGY DRINK ABACAXI 200ml","s":"SUPLEMENTOS","v":26496.0,"q":2208.0},{"p":"FRESUBIN PROTEIN ENERGY DRINK CHOCOLATE 200ml","s":"SUPLEMENTOS","v":26496.0,"q":2208.0},{"p":"DIBEN 1.5 KCAL HP 500ML EB","s":"DIETAS ENTERAIS - EASY BAG 500ML - 1000ML","v":25344.0,"q":720.0},{"p":"FRESUBIN PROTEIN ENERGY DRINK CAPUCCINO 200ML","s":"SUPLEMENTOS","v":21951.36,"q":1776.0},{"p":"FRESUBIN 2KCAL DRINK NEUTRO 200ML","s":"SUPLEMENTOS","v":17222.4,"q":1248.0},{"p":"FRESUBIN PROTEIN ENERGY DRINK CHOCOLATE 200ML","s":"SUPLEMENTOS","v":16908.48,"q":1368.0},{"p":"THICK & EASY 9 G SACHÊ  CX COM 100","s":"PRODUTOS EM PÓ - LATAS/SACHÊ","v":13340.0,"q":23.0},{"p":"FRESUBIN 3.2 KCAL DRINK MANGA 125ML","s":"SUPLEMENTOS","v":10679.04,"q":648.0},{"p":"FREBINI ENERGY 500ML","s":"DIETAS ENTERAIS PEDIÁTRICAS","v":8550.0,"q":225.0}],"ent_total":2366770.41,"mes_full":{"1":"Janeiro","2":"Fevereiro","3":"Março","4":"Abril","5":"Maio","6":"Junho","7":"Julho","8":"Agosto","9":"Setembro","10":"Outubro","11":"Novembro","12":"Dezembro"},"mes_short":{"1":"Jan","2":"Fev","3":"Mar","4":"Abr","5":"Mai","6":"Jun","7":"Jul","8":"Ago","9":"Set","10":"Out","11":"Nov","12":"Dez"},"ec_anos":[2025,2026],"ec_unids":["CASA DE PORTUGAL","HOSPITAL CASA EVANGELICO","HOSPITAL CASA MENSSANA","HOSPITAL CASA RIO BOTAFOGO","HOSPITAL CASA RIO LARANJEIRAS","HOSPITAL CASA SANTA CRUZ","HOSPITAL CASA SAO BERNARDO","HOSPITAL DE CANCER","HOSPITAL ILHA DO GOVERNADOR"],"ec_bases":["MV ILHA","MV SOUL","MV2000"],"ec_tipos":["BAIXA DE PRODUTO","SAIDA EMPRESTIMO","SAIDA PACIENTE","SAIDA SETOR","TRANSF. ESTOQUE"],"ec_unid_base":{"HOSPITAL ILHA DO GOVERNADOR":"MV ILHA","HOSPITAL CASA EVANGELICO":"MV SOUL","HOSPITAL CASA MENSSANA":"MV SOUL","HOSPITAL CASA RIO BOTAFOGO":"MV SOUL","HOSPITAL CASA RIO LARANJEIRAS":"MV SOUL","HOSPITAL CASA SANTA CRUZ":"MV SOUL","HOSPITAL CASA SAO BERNARDO":"MV SOUL","HOSPITAL DE CANCER":"MV SOUL","CASA DE PORTUGAL":"MV2000"},"ec_kpi":{"2025":{"e":133062818.09,"c":343835369.8,"s":-210772551.71},"2026":{"e":12340163.14,"c":30756109.97,"s":-18415946.83},"total":{"e":145402981.23,"c":374591479.77,"s":-229188498.54}},"ec_evo":{"2025":{"1":{"e":12148875.81,"c":30696077.04},"2":{"e":11582981.95,"c":35790296.98},"3":{"e":10769842.45,"c":23893909.28},"4":{"e":10115289.08,"c":26828945.64},"5":{"e":12466128.36,"c":37139719.57},"6":{"e":11659362.79,"c":32783300.53},"7":{"e":12347287.09,"c":24974014.6},"8":{"e":10850219.36,"c":24360309.01},"9":{"e":10842926.83,"c":23501058.37},"10":{"e":13229762.96,"c":36450542.4},"11":{"e":9228731.71,"c":24428943.22},"12":{"e":7821409.7,"c":22988253.15}},"2026":{"1":{"e":6229161.38,"c":19263945.6},"2":{"e":6111001.76,"c":11492164.37},"3":{"e":0.0,"c":0.0},"4":{"e":0.0,"c":0.0},"5":{"e":0.0,"c":0.0},"6":{"e":0.0,"c":0.0},"7":{"e":0.0,"c":0.0},"8":{"e":0.0,"c":0.0},"9":{"e":0.0,"c":0.0},"10":{"e":0.0,"c":0.0},"11":{"e":0.0,"c":0.0},"12":{"e":0.0,"c":0.0}}},"ec_unid":{"CASA DE PORTUGAL":{"2025":{"e":49188246.01,"c":200794753.48},"2026":{"e":4411133.91,"c":9034561.13}},"HOSPITAL CASA EVANGELICO":{"2025":{"e":13689193.19,"c":21666527.38},"2026":{"e":1499262.56,"c":2768828.29}},"HOSPITAL CASA MENSSANA":{"2025":{"e":1575643.81,"c":4949065.15},"2026":{"e":217160.74,"c":483447.34}},"HOSPITAL CASA RIO BOTAFOGO":{"2025":{"e":5855267.04,"c":5950494.03},"2026":{"e":23976.47,"c":61350.05}},"HOSPITAL CASA RIO LARANJEIRAS":{"2025":{"e":11009373.05,"c":15029461.12},"2026":{"e":79576.58,"c":284707.28}},"HOSPITAL CASA SANTA CRUZ":{"2025":{"e":3167943.46,"c":5837197.27},"2026":{"e":64151.92,"c":179524.26}},"HOSPITAL CASA SAO BERNARDO":{"2025":{"e":18386183.77,"c":40031214.55},"2026":{"e":2385527.79,"c":11318973.71}},"HOSPITAL DE CANCER":{"2025":{"e":16244254.19,"c":18904016.15},"2026":{"e":1913116.92,"c":1769565.87}},"HOSPITAL ILHA DO GOVERNADOR":{"2025":{"e":13946713.57,"c":30672640.66},"2026":{"e":1746256.25,"c":4855152.04}}},"ec_base":{"MV ILHA":{"2025":{"1":{"e":1161156.12,"c":1829663.61},"2":{"e":1267601.66,"c":10356968.82},"3":{"e":1361275.99,"c":1807763.38},"4":{"e":1217350.75,"c":1842715.07},"5":{"e":1111707.11,"c":1575410.61},"6":{"e":1025458.57,"c":1718928.0},"7":{"e":1244358.12,"c":1593214.3},"8":{"e":1075799.95,"c":1391594.66},"9":{"e":932412.45,"c":2490214.66},"10":{"e":1750729.1,"c":2302081.17},"11":{"e":882961.41,"c":1149034.42},"12":{"e":915902.34,"c":2615051.96}},"2026":{"1":{"e":990577.97,"c":1673168.46},"2":{"e":755678.28,"c":3181983.58},"3":{"e":0.0,"c":0.0},"4":{"e":0.0,"c":0.0},"5":{"e":0.0,"c":0.0},"6":{"e":0.0,"c":0.0},"7":{"e":0.0,"c":0.0},"8":{"e":0.0,"c":0.0},"9":{"e":0.0,"c":0.0},"10":{"e":0.0,"c":0.0},"11":{"e":0.0,"c":0.0},"12":{"e":0.0,"c":0.0}}},"MV SOUL":{"2025":{"1":{"e":6259207.9,"c":12687604.22},"2":{"e":6071540.06,"c":8331761.99},"3":{"e":5415315.68,"c":9830862.25},"4":{"e":5465282.28,"c":7851138.42},"5":{"e":6354318.03,"c":8708535.54},"6":{"e":6221091.25,"c":8838342.75},"7":{"e":6800762.1,"c":9853493.6},"8":{"e":5950047.58,"c":8387191.44},"9":{"e":5722285.41,"c":8026290.06},"10":{"e":6926191.64,"c":9710662.39},"11":{"e":4841017.44,"c":8078885.78},"12":{"e":3900799.14,"c":12063207.23}},"2026":{"1":{"e":3073228.75,"c":12698434.71},"2":{"e":3109544.23,"c":4167962.09},"3":{"e":0.0,"c":0.0},"4":{"e":0.0,"c":0.0},"5":{"e":0.0,"c":0.0},"6":{"e":0.0,"c":0.0},"7":{"e":0.0,"c":0.0},"8":{"e":0.0,"c":0.0},"9":{"e":0.0,"c":0.0},"10":{"e":0.0,"c":0.0},"11":{"e":0.0,"c":0.0},"12":{"e":0.0,"c":0.0}}},"MV2000":{"2025":{"1":{"e":4728511.79,"c":16178809.21},"2":{"e":4243840.23,"c":17101566.17},"3":{"e":3993250.78,"c":12255283.65},"4":{"e":3432656.05,"c":17135092.15},"5":{"e":5000103.22,"c":26855773.42},"6":{"e":4412812.97,"c":22226029.78},"7":{"e":4302166.87,"c":13527306.69},"8":{"e":3824371.83,"c":14581522.91},"9":{"e":4188228.97,"c":12984553.66},"10":{"e":4552842.22,"c":24437798.84},"11":{"e":3504752.86,"c":15201023.03},"12":{"e":3004708.22,"c":8309993.97}},"2026":{"1":{"e":2165354.66,"c":4892342.42},"2":{"e":2245779.25,"c":4142218.71},"3":{"e":0.0,"c":0.0},"4":{"e":0.0,"c":0.0},"5":{"e":0.0,"c":0.0},"6":{"e":0.0,"c":0.0},"7":{"e":0.0,"c":0.0},"8":{"e":0.0,"c":0.0},"9":{"e":0.0,"c":0.0},"10":{"e":0.0,"c":0.0},"11":{"e":0.0,"c":0.0},"12":{"e":0.0,"c":0.0}}}},"ec_tipo":{"BAIXA DE PRODUTO":{"2025":988036.93,"2026":132701.79},"SAIDA EMPRESTIMO":{"2025":22723748.34,"2026":3080022.05},"SAIDA PACIENTE":{"2025":45465146.22,"2026":5184713.12},"SAIDA SETOR":{"2025":199879572.8,"2026":14982769.14},"TRANSF. ESTOQUE":{"2025":74778865.5,"2026":7375903.86}},"ec_top":[{"p":"REFIL 4 DIVISÕES","b":"MV2000","v":40173708.0,"q":65006.0,"n":12},{"p":"REFIL TAMPA 4 DIVISÕES","b":"MV2000","v":24069438.0,"q":63009.0,"n":11},{"p":"AÇÚCAR SACHÊ - UNIDADE","b":"MV2000","v":15603023.4,"q":401106.0,"n":14},{"p":"COPO DE ISOPOR 180 ML CX C/1000","b":"MV SOUL","v":10264680.0,"q":57026.0,"n":37},{"p":"MARMITA ISOPOR 04 CAV TK 110","b":"MV SOUL","v":9096290.0,"q":45710.0,"n":13},{"p":"BISCOITO CREAM CRACKER SACHÊ C/4 UNIDADES","b":"MV2000","v":6568247.7,"q":107853.0,"n":13},{"p":"REFIL 4 DIVISOES - CX","b":"MV SOUL","v":6399390.0,"q":10355.0,"n":42},{"p":"COLHER DESCARTAVEL DE SOBREMESA","b":"MV ILHA","v":6341475.0,"q":70500.0,"n":8},{"p":"ELETRODO DESCARTAVEL","b":"MV SOUL","v":4544732.22,"q":820510.0,"n":252},{"p":"LUVA PROCEDIMENTOS M","b":"MV2000","v":4136556.4,"q":25059447.0,"n":56},{"p":"POLENGUINHO LIGHT","b":"MV2000","v":4044216.96,"q":61054.0,"n":14},{"p":"SAL SACHÊ","b":"MV2000","v":3921759.6,"q":172007.0,"n":14},{"p":"ANFOTERICINA B LIPOSOMAL FR 50MG/10ML (AMBISOME)","b":"MV2000","v":3749900.0,"q":1948.0,"n":17},{"p":"CEFTAZIDIMA + AVIBACTAM 2,5G ( TORGENA)","b":"MV2000","v":3658667.97,"q":4910.0,"n":42},{"p":"BOBINA DE UNITARIZACAO TRANSPARENTE 4,5X8 C/10.000","b":"MV2000","v":2806650.0,"q":8019.0,"n":12},{"p":"SACO DE AMOSTRA  15 X 35  C/1000 UNID","b":"MV2000","v":2642016.04,"q":9261.0,"n":10},{"p":"ETIQUETA PRODUTO PAPEL ADESIVO","b":"MV SOUL","v":2630880.0,"q":16443.0,"n":7},{"p":"COLHER FORTE/MASTER DESCARTAVEL CX C/ 1000","b":"MV ILHA","v":2606370.0,"q":20049.0,"n":6},{"p":"QUENTINHA RETANGULAR C/ 3 DIVISOES","b":"MV SOUL","v":2557704.0,"q":1801.0,"n":2},{"p":"TORRADA INTEGRAL SACHÊ","b":"MV2000","v":2538236.6,"q":28234.0,"n":13},{"p":"CATETER TRIPLO LUMEN","b":"MV2000","v":2535179.26,"q":16149.0,"n":55},{"p":"GUARDANAPO 20 X 20","b":"MV SOUL","v":2467251.19,"q":35297.0,"n":38},{"p":"PIPERACILINA + TAZOBACTAM FR 4,5G (TAZOCIN)","b":"MV2000","v":2380996.26,"q":215949.0,"n":47},{"p":"ENOXAPARINA SODICA SER 40MG 0,4ML (CLEXANE)(M.A.R)","b":"MV2000","v":2257403.32,"q":228037.0,"n":46},{"p":"COPO/POTE PLASTICO - DESCARTAVEL 100ML [EMBALAGEM C/100]","b":"MV ILHA","v":2246640.0,"q":20424.0,"n":13},{"p":"MEROPENEM FR 1G (MERONEM)","b":"MV2000","v":2086864.42,"q":174458.0,"n":50},{"p":"FRESUBIN HP ENERGY 1000ML","b":"MV2000","v":2046291.16,"q":43325.0,"n":44},{"p":"TAMPA COPO DE ISOPOR","b":"MV SOUL","v":1968312.45,"q":13122083.0,"n":37},{"p":"BISCOITO ÁGUA SACHÊ C/2 UNIDADES","b":"MV2000","v":1815472.8,"q":43852.0,"n":14},{"p":"KIT TALHER DESJ/LANCHE E CEIA","b":"MV SOUL","v":1810515.96,"q":4114809.0,"n":20},{"p":"KIT TALHER ALMOCO/JANTAR","b":"MV SOUL","v":1798802.72,"q":4088188.0,"n":20},{"p":"FRALDA GERIATRICA G","b":"MV SOUL","v":1629564.23,"q":928727.0,"n":244},{"p":"BOBINA DE UNITARIZACAO TRANSPARENTE 6X10","b":"MV2000","v":1624050.0,"q":6015.0,"n":8},{"p":"SEVOFLURANO  250ML FR  - SEVORANE","b":"MV ILHA","v":1622422.93,"q":5156.0,"n":32},{"p":"IMUNOGLOBULINA HUMANA FR/AMP 5G","b":"MV2000","v":1504597.47,"q":840.0,"n":25},{"p":"CONTRASTE RADIOLOGICO 370MG 1% 100ML FA","b":"MV ILHA","v":1482711.47,"q":10868.0,"n":32},{"p":"FRESUBIN JUCY DRINK 200ML","b":"MV2000","v":1480632.37,"q":61250.0,"n":17},{"p":"COSTELA BOVINA FATIADA - KILO","b":"MV SOUL","v":1442972.06,"q":76348.0,"n":19},{"p":"KIT LP16 - USO GERAL (LP16)","b":"MV SOUL","v":1442584.34,"q":20205.0,"n":154},{"p":"ALBUMINA HUMANA 20% FR 50 ML","b":"MV2000","v":1426958.49,"q":10045.0,"n":45},{"p":"AVENTAL DESCART MANGA LONGA/PUNHO MALHA 30GR","b":"MV2000","v":1402961.48,"q":592548.0,"n":57},{"p":"FRALDA GERIATRICA G","b":"MV2000","v":1399713.87,"q":834242.0,"n":55},{"p":"PANTOPRAZOL FR 40MG (PANTOZOL)","b":"MV2000","v":1386262.61,"q":229844.0,"n":49},{"p":"NUTRIFLEX LIPID PLUS 1875ML","b":"MV2000","v":1379368.03,"q":3116.0,"n":42},{"p":"MATERIAL DE MANUTENCAO","b":"MV SOUL","v":1324909.79,"q":32.0,"n":11},{"p":"GADOBUTROL 1.0 MMOL FR 15ML (GADOVIST)","b":"MV2000","v":1278864.45,"q":7122.0,"n":42},{"p":"REFIL SOPA - CX","b":"MV SOUL","v":1259484.0,"q":2038.0,"n":11},{"p":"IOPROMIDA 769MG FR (ULTRAVIST 370MG/100ML)","b":"MV2000","v":1247577.65,"q":9315.0,"n":49},{"p":"LIBTAYO 350MG ( CEMIPLIMABE )","b":"MV SOUL","v":1201168.24,"q":31.0,"n":26},{"p":"KIT LP 16 - USO GERAL ( LP16 )","b":"MV2000","v":1081020.93,"q":15068.0,"n":43}],"ec_top_ent":[{"p":"PEMBROLIZUMABE 25MG/ML FA 4ML","b":"MV SOUL","v":2145845.11,"q":122.0},{"p":"LUVA PROCEDIMENTOS M","b":"MV2000","v":2050709.81,"q":10465500.0},{"p":"TRASTUZUMABE DERUXTECAN 100MG FA (ENHERTU)","b":"MV SOUL","v":1557294.85,"q":99.0},{"p":"CEFTAZIDIMA + AVIBACTAM 2,5G ( TORGENA)","b":"MV2000","v":1463849.06,"q":2029.0},{"p":"PIPERACILINA + TAZOBACTAM FR 4,5G (TAZOCIN)","b":"MV2000","v":1338406.05,"q":91386.0},{"p":"PAPEL TOALHA INTERFOLHA - FARDO C/1000 FOLHAS","b":"MV2000","v":1315974.5,"q":128000.0},{"p":"ANFOTERICINA B LIPOSOMAL FR 50MG/10ML (AMBISOME)","b":"MV2000","v":1260358.75,"q":646.0},{"p":"FRALDA GERIATRICA G","b":"MV SOUL","v":1118231.8,"q":588904.0},{"p":"ENOXAPARINA SODICA SER 40MG 0,4ML (CLEXANE)(M.A.R)","b":"MV2000","v":1095003.6,"q":94125.0},{"p":"PERTUZUMABE 30MG/ML FA 14ML","b":"MV SOUL","v":1022041.97,"q":71.0},{"p":"MEROPENEM FR 1G (MERONEM)","b":"MV2000","v":999499.76,"q":70154.0},{"p":"DARATUMUMABE 400MG/20ML","b":"MV SOUL","v":891116.33,"q":110.0},{"p":"FRESUBIN HP ENERGY 1000ML","b":"MV2000","v":871962.28,"q":18962.0},{"p":"CATETER TRIPLO LUMEN","b":"MV2000","v":846360.28,"q":5676.0},{"p":"KIT LP16 - USO GERAL (LP16)","b":"MV SOUL","v":810702.31,"q":11299.0},{"p":"AVENTAL DESCART MANGA LONGA/PUNHO MALHA 30GR","b":"MV2000","v":763770.63,"q":249280.0},{"p":"LUVA DE PROCEDIMENTO LATEX TAM. M - UNIDADE","b":"MV SOUL","v":754621.8,"q":2156197.0},{"p":"FRALDA GERIATRICA G","b":"MV2000","v":742679.78,"q":391160.0},{"p":"PANTOPRAZOL FR 40MG (PANTOZOL)","b":"MV2000","v":716945.85,"q":95344.0},{"p":"DURVALUMAB 50MG/ML FA 10ML","b":"MV SOUL","v":716525.9,"q":53.0},{"p":"LUVA PROCEDIMENTOS M (*.*)","b":"MV SOUL","v":712169.47,"q":2324570.0},{"p":"LIBTAYO 350MG ( CEMIPLIMABE )","b":"MV SOUL","v":692467.56,"q":16.0},{"p":"IMUNOGLOBULINA HUMANA FR/AMP 5G","b":"MV2000","v":668106.03,"q":370.0},{"p":"CLORETO DE SODIO 0,9% 250ML - FR","b":"MV SOUL","v":663938.95,"q":145777.0},{"p":"USTEQUINUMABE  IV 130MG/26ML (STELARA)","b":"MV SOUL","v":661895.46,"q":19.0},{"p":"MATERIAL DE MANUTENCAO","b":"MV SOUL","v":657143.93,"q":32.0},{"p":"TRASTUZUMABE ENTASINA 160MG FA (KADCYLA)","b":"MV SOUL","v":655034.98,"q":49.0},{"p":"OXIGENIO LIQUIDO GRANEL","b":"MV ILHA","v":619215.04,"q":154750.0},{"p":"ALBUMINA HUMANA 20% FR 50 ML","b":"MV2000","v":611676.41,"q":4077.0},{"p":"SACO DE LIXO AZUL DE 200L PCT C/100","b":"MV2000","v":581788.0,"q":8560.0}]};
+
+const ANOS=D.anos, CATS=D.cats, MF=D.mes_full, MS=D.mes_short;
+const CAT_COLORS=['#2E75B6','#70AD47','#ED7D31','#FFC000','#C00000','#7030A0','#00B050','#FF0000','#92D050','#4472C4','#C8380A'];
+const ANO_COLORS={2024:'#2E75B6',2025:'#70AD47',2026:'#ED7D31'};
+const ENT_ANO_COLS={'2025':'#C8380A','2026':'#D97855'};
+const EC_ENT_COLOR='#2E75B6', EC_SAI_COLOR='#ED7D31', EC_SALDO_COLOR='#70AD47';
+const TIPO_COLORS={'SAIDA PACIENTE':'#C00000','SAIDA SETOR':'#ED7D31','TRANSF. ESTOQUE':'#2E75B6','SAIDA EMPRESTIMO':'#7030A0','BAIXA DE PRODUTO':'#595959'};
+const BASE_COLORS={'MV ILHA':'#2E75B6','MV SOUL':'#70AD47','MV2000':'#ED7D31'};
+
+function catColor(c){ if(c==='Dieta Enteral') return '#C8380A'; return CAT_COLORS[CATS.indexOf(c)%CAT_COLORS.length]||'#888'; }
+function brl(v){ return 'R$ '+Math.round(v||0).toLocaleString('pt-BR'); }
+function brl2(v){ return 'R$ '+(+v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function num(v){ return Math.round(v||0).toLocaleString('pt-BR'); }
+function pct(v){ return ((v||0)*100).toFixed(1)+'%'; }
+function sa(k){ return String(k); }
+
+let selAnos=new Set(ANOS.map(String)), selCats=new Set(CATS), mDe=1, mAte=12, curTab='geral';
+let charts={};
+let ecSelAnos=new Set(D.ec_anos.map(String)), ecSelBases=new Set(D.ec_bases), ecSelTipos=new Set(D.ec_tipos);
+
+window.onload=function(){
+  buildSidebar(); buildECFilters(); render();
+  document.getElementById('ld').style.display='none';
+};
+
+function buildSidebar(){
+  const fa=document.getElementById('fano');
+  ANOS.forEach(a=>{ fa.innerHTML+=`<label><input type="checkbox" checked value="${a}" onchange="onFilter()"> ${a}</label>`; });
+  const fc=document.getElementById('fcat');
+  CATS.forEach(c=>{
+    const ie=c==='Dieta Enteral';
+    fc.innerHTML+=`<label><input type="checkbox" checked value="${c}" onchange="onFilter()">
+      <span class="dot" style="background:${catColor(c)}"></span>
+      ${c.length>22?c.slice(0,20)+'…':c}${ie?' 🍼':''}</label>`;
+  });
+  const sic=document.getElementById('sic');
+  CATS.forEach(c=>{ sic.innerHTML+=`<option value="${c}">${c}</option>`; });
+}
+
+function buildECFilters(){
+  const fa=document.getElementById('ec-fano');
+  D.ec_anos.forEach(a=>{
+    fa.innerHTML+=`<label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer">
+      <input type="checkbox" checked value="${a}" onchange="onECFilter()"> ${a}</label>`;
+  });
+  const fb=document.getElementById('ec-fbase');
+  D.ec_bases.forEach(b=>{
+    fb.innerHTML+=`<label style="display:flex;align-items:center;gap:5px;font-size:.8rem;cursor:pointer">
+      <input type="checkbox" checked value="${b}" onchange="onECFilter()">
+      <span style="width:10px;height:10px;border-radius:50%;background:${BASE_COLORS[b]||'#888'};display:inline-block"></span>${b}</label>`;
+  });
+  const ft=document.getElementById('ec-ftipo');
+  D.ec_tipos.forEach(t=>{
+    ft.innerHTML+=`<label style="display:flex;align-items:center;gap:5px;font-size:.8rem;cursor:pointer">
+      <input type="checkbox" checked value="${t}" onchange="onECFilter()">
+      <span style="width:10px;height:10px;border-radius:50%;background:${TIPO_COLORS[t]||'#888'};display:inline-block"></span>
+      ${t.length>18?t.slice(0,16)+'…':t}</label>`;
+  });
+}
+
+function onFilter(){
+  selAnos=new Set(); document.querySelectorAll('#fano input:checked').forEach(cb=>selAnos.add(cb.value));
+  selCats=new Set(); document.querySelectorAll('#fcat input:checked').forEach(cb=>selCats.add(cb.value));
+  mDe=+document.getElementById('fmde').value; mAte=+document.getElementById('fmat').value;
+  render();
+}
+function onRng(){
+  mDe=+document.getElementById('fmde').value; mAte=+document.getElementById('fmat').value;
+  document.getElementById('lmde').textContent=MS[sa(mDe)]; document.getElementById('lmat').textContent=MS[sa(mAte)];
+  render();
+}
+function resetFilters(){
+  document.querySelectorAll('#fano input,#fcat input').forEach(cb=>cb.checked=true);
+  document.getElementById('fmde').value=1; document.getElementById('fmat').value=12;
+  selAnos=new Set(ANOS.map(String)); selCats=new Set(CATS); mDe=1; mAte=12; render();
+}
+function onECFilter(){
+  ecSelAnos=new Set(); document.querySelectorAll('#ec-fano input:checked').forEach(cb=>ecSelAnos.add(cb.value));
+  ecSelBases=new Set(); document.querySelectorAll('#ec-fbase input:checked').forEach(cb=>ecSelBases.add(cb.value));
+  ecSelTipos=new Set(); document.querySelectorAll('#ec-ftipo input:checked').forEach(cb=>ecSelTipos.add(cb.value));
+  renderECPanel();
+}
+function resetECFilters(){
+  document.querySelectorAll('#ec-fano input,#ec-fbase input,#ec-ftipo input').forEach(cb=>cb.checked=true);
+  ecSelAnos=new Set(D.ec_anos.map(String)); ecSelBases=new Set(D.ec_bases); ecSelTipos=new Set(D.ec_tipos);
+  renderECPanel();
+}
+
+function setTab(t,btn){
+  curTab=t;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+  btn.classList.add('active');
+  renderCharts();
+}
+function getMonths(){ const m=[]; for(let i=mDe;i<=mAte;i++) m.push(i); return m; }
+function getAnos(){ return ANOS.filter(a=>selAnos.has(String(a))); }
+
+function evoVal(ano,m){
+  let v=0;
+  selCats.forEach(cat=>{ const d=D.cat[cat]?.[sa(ano)]?.[sa(m)]; if(d) v+=d[0]; });
+  return v;
+}
+function catVal(cat){
+  let v=0,q=0;
+  getAnos().forEach(ano=>{ getMonths().forEach(m=>{ const d=D.cat[cat]?.[sa(ano)]?.[sa(m)]; if(d){v+=d[0];q+=d[1];} }); });
+  return {v,q};
+}
+function evoValCat(cat,ano,m){ return D.cat[cat]?.[sa(ano)]?.[sa(m)]?.[0]||0; }
+function getProds(){
+  return D.prods.filter(p=>selCats.has(p.c)).map(p=>{
+    let vv=0;
+    getAnos().forEach(ano=>{ getMonths().forEach(m=>{
+      const d=D.cat[p.c]?.[sa(ano)]?.[sa(m)]; if(d) vv+=d[0]/Math.max(1,...D.prods.filter(x=>x.c===p.c&&x.p===p.p).length||[1]);
+    }); });
+    // simpler: use precomputed v * fraction from filtered period
+    let tv=0; getAnos().forEach(ano=>{ getMonths().forEach(m=>{ const d=D.cat[p.c]?.[sa(ano)]?.[sa(m)]; if(d) tv+=d[0]; }); });
+    const catTotal=D.prods.filter(x=>x.c===p.c).reduce((s,x)=>s+x.v,0);
+    return {...p, vv: catTotal>0 ? p.v/catTotal*tv : 0};
+  }).filter(p=>p.vv>0).sort((a,b)=>b.vv-a.vv);
+}
+function lerp(c1,c2,t){
+  const h=c=>c.match(/\w\w/g).map(x=>parseInt(x,16));
+  const [r1,g1,b1]=h(c1.slice(1)),[r2,g2,b2]=h(c2.slice(1));
+  return `rgb(${Math.round(r1+(r2-r1)*t)},${Math.round(g1+(g2-g1)*t)},${Math.round(b1+(b2-b1)*t)})`;
+}
+
+function render(){ renderKPIs(); renderCharts(); }
+
+function renderKPIs(){
+  const anos=getAnos(), months=getMonths();
+  let totalV=0,totalQ=0;
+  CATS.forEach(cat=>{ if(!selCats.has(cat)) return;
+    anos.forEach(ano=>{ months.forEach(m=>{ const d=D.cat[cat]?.[sa(ano)]?.[sa(m)]; if(d){totalV+=d[0];totalQ+=d[1];} }); });
+  });
+  const entCatVal=CATS.includes('Dieta Enteral')?catVal('Dieta Enteral'):{v:0};
+  const colors=['','g','o','n'];
+  let html=`<div class="kcard"><div class="klb">💰 Total Filtrado</div>
+    <div class="kv">${brl(totalV)}</div><div class="ks">${num(totalQ)} unidades</div></div>`;
+  anos.forEach((ano,i)=>{
+    let v=0; CATS.forEach(cat=>{ if(!selCats.has(cat)) return; months.forEach(m=>{ const d=D.cat[cat]?.[sa(ano)]?.[sa(m)]; if(d) v+=d[0]; }); });
+    html+=`<div class="kcard ${colors[(i+1)%4]}"><div class="klb">📅 ${ano}</div>
+      <div class="kv">${brl(v)}</div><div class="ks">${D.kpis[sa(ano)]?.i||0} itens únicos</div></div>`;
+  });
+  if(selCats.has('Dieta Enteral')){
+    html+=`<div class="kcard e"><div class="klb">🍼 Dieta Enteral</div>
+      <div class="kv">${brl(entCatVal.v)}</div><div class="ks">Jan/2025 – Mar/2026 · Fresenius</div></div>`;
+  }
+  document.getElementById('krow').innerHTML=html;
+}
+
+function dc(id){ if(charts[id]){charts[id].destroy();delete charts[id];} }
+
+function renderCharts(){
+  if(curTab==='geral'){ drawCatBar();drawEvo();drawHeatmap(); }
+  else if(curTab==='cat'){ drawPie();drawCatAno();renderCatTable(); }
+  else if(curTab==='itens'){ drawTopItens();renderItens(); }
+  else if(curTab==='mensal'){ drawMensal();renderMensalTable(); }
+  else if(curTab==='enteral'){ renderEnteralPanel(); }
+  else if(curTab==='ec'){ renderECPanel(); }
+}
+
+function drawCatBar(){
+  dc('catbar');
+  const data=CATS.filter(c=>selCats.has(c)).map(c=>({c,v:catVal(c).v})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  charts['catbar']=new Chart(document.getElementById('c-catbar').getContext('2d'),{
+    type:'bar', data:{labels:data.map(x=>x.c.length>18?x.c.slice(0,16)+'…':x.c),
+      datasets:[{data:data.map(x=>x.v),backgroundColor:data.map(x=>catColor(x.c)),borderRadius:5,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+brl(c.raw)}}},
+      scales:{x:{ticks:{font:{size:9},maxRotation:30},grid:{display:false}},y:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}}}}
+  });
+}
+function drawEvo(){
+  dc('evo');
+  const anos=getAnos(), months=getMonths();
+  charts['evo']=new Chart(document.getElementById('c-evo').getContext('2d'),{
+    type:'line', data:{labels:months.map(m=>MS[sa(m)]||m),
+      datasets:anos.map(ano=>({label:String(ano),data:months.map(m=>evoVal(ano,m)),
+        borderColor:ANO_COLORS[ano]||'#888',backgroundColor:(ANO_COLORS[ano]||'#888')+'22',
+        tension:.35,fill:false,pointRadius:4,borderWidth:2.5}))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${brl(c.raw)}`}}},
+      scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}}}}
+  });
+}
+function drawHeatmap(){
+  const months=getMonths(), anos=getAnos();
+  let allVals=[];
+  CATS.filter(c=>selCats.has(c)).forEach(cat=>{ anos.forEach(ano=>{ months.forEach(m=>{ allVals.push(evoValCat(cat,ano,m)); }); }); });
+  const maxV=Math.max(...allVals,1);
+  let html='';
+  CATS.filter(c=>selCats.has(c)).forEach(cat=>{
+    if(catVal(cat).v===0) return;
+    const ie=cat==='Dieta Enteral';
+    html+=`<div class="hm-row"><div class="hm-label">${ie?'🍼 ':''} ${cat}</div>
+      <div class="hm-cells" style="grid-template-columns:repeat(${months.length},1fr)">`;
+    months.forEach(m=>{
+      let v=0; anos.forEach(ano=>{ v+=evoValCat(cat,ano,m); });
+      const t=maxV>0?v/maxV:0;
+      const bg=v>0?(ie?lerp('#fcd5c8','#8B1A00',t):lerp('#BDD7EE','#1F3864',t)):'#f2f2f2';
+      const fc=t>0.45?'#fff':ie?'#8B1A00':'#1F3864';
+      const vl=v>1e6?(v/1e6).toFixed(1)+'M':v>1000?(v/1000).toFixed(0)+'k':v>0?Math.round(v):'–';
+      html+=`<div class="hm-cell" style="background:${bg};color:${fc}" title="${MF[sa(m)]}: ${brl(v)}">
+        <div class="mn">${MS[sa(m)]}</div><div class="mv">${vl}</div></div>`;
+    });
+    html+=`</div></div>`;
+  });
+  document.getElementById('heatmap').innerHTML=html||'<p style="color:#aaa;padding:12px">Nenhum dado.</p>';
+}
+function drawPie(){
+  dc('pie');
+  const data=CATS.filter(c=>selCats.has(c)).map(c=>({c,v:catVal(c).v})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  const tot=data.reduce((s,x)=>s+x.v,0);
+  charts['pie']=new Chart(document.getElementById('c-pie').getContext('2d'),{
+    type:'doughnut', data:{labels:data.map(x=>x.c),
+      datasets:[{data:data.map(x=>x.v),backgroundColor:data.map(x=>catColor(x.c)),borderWidth:2,borderColor:'#fff',hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:12,padding:7}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${brl(c.raw)} (${pct(c.raw/tot)})`}}}}
+  });
+}
+function drawCatAno(){
+  dc('catano');
+  const anos=getAnos(), months=getMonths(), fCats=CATS.filter(c=>selCats.has(c));
+  charts['catano']=new Chart(document.getElementById('c-catano').getContext('2d'),{
+    type:'bar', data:{labels:fCats.map(c=>c.length>14?c.slice(0,12)+'…':c),
+      datasets:anos.map(ano=>({label:String(ano),
+        data:fCats.map(cat=>{ let v=0; months.forEach(m=>{v+=evoValCat(cat,ano,m);}); return v; }),
+        backgroundColor:ANO_COLORS[ano]||'#888',borderRadius:3}))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${brl(c.raw)}`}}},
+      scales:{x:{ticks:{font:{size:8},maxRotation:35},grid:{display:false}},y:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}}}}
+  });
+}
+function renderCatTable(){
+  const data=CATS.filter(c=>selCats.has(c)).map(c=>({c,...catVal(c)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  const tot=data.reduce((s,x)=>s+x.v,0);
+  let html='';
+  data.forEach(x=>{
+    const p=tot>0?x.v/tot:0;
+    html+=`<tr><td><span class="bcat" style="background:${catColor(x.c)}">&nbsp;</span> ${x.c}</td>
+      <td class="r">${brl(x.v)}</td><td class="r">${num(x.q)}</td>
+      <td><span style="font-size:.72rem">${pct(p)}</span>
+        <div class="bw"><div class="bf" style="width:${Math.round(p*100)}%;background:${catColor(x.c)}"></div></div></td>
+    </tr>`;
+  });
+  document.getElementById('tb-cat').innerHTML=html;
+}
+function drawTopItens(){
+  dc('topitens');
+  const top=D.prods.filter(p=>selCats.has(p.c)).slice(0,20);
+  charts['topitens']=new Chart(document.getElementById('c-topitens').getContext('2d'),{
+    type:'bar', data:{labels:top.map(p=>p.p.length>38?p.p.slice(0,36)+'…':p.p),
+      datasets:[{data:top.map(p=>p.v),backgroundColor:top.map(p=>catColor(p.c)),borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+brl(c.raw)}}},
+      scales:{x:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}},y:{ticks:{font:{size:9}},grid:{display:false}}}}
+  });
+}
+function renderItens(){
+  const q=document.getElementById('si').value.toLowerCase();
+  const catF=document.getElementById('sic').value;
+  const prods=D.prods.filter(p=>selCats.has(p.c));
+  const tot=prods.reduce((s,p)=>s+p.v,0);
+  let filt=prods;
+  if(q) filt=filt.filter(p=>p.p.toLowerCase().includes(q));
+  if(catF) filt=filt.filter(p=>p.c===catF);
+  document.getElementById('icnt').textContent=filt.length+' itens';
+  let html='';
+  filt.slice(0,200).forEach((p,i)=>{
+    const pp=tot>0?p.v/tot:0;
+    html+=`<tr><td class="r">${i+1}</td><td class="pn">${p.p}</td>
+      <td><span class="bcat" style="background:${catColor(p.c)}">${p.c.length>14?p.c.slice(0,12)+'…':p.c}</span></td>
+      <td class="r">${brl(p.v)}</td><td class="r">${num(p.q)}</td>
+      <td class="r">${num(p.n)}</td><td class="r">${pct(pp)}</td></tr>`;
+  });
+  document.getElementById('tb-itens').innerHTML=html;
+}
+function drawMensal(){
+  dc('mensal');
+  const anos=getAnos(), months=getMonths();
+  charts['mensal']=new Chart(document.getElementById('c-mensal').getContext('2d'),{
+    type:'bar', data:{labels:months.map(m=>MS[sa(m)]),
+      datasets:anos.map(ano=>({label:String(ano),data:months.map(m=>evoVal(ano,m)),
+        backgroundColor:ANO_COLORS[ano]||'#888',borderRadius:4}))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${brl(c.raw)}`}}},
+      scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}}}}
+  });
+}
+function renderMensalTable(){
+  const anos=getAnos(), months=getMonths();
+  let html='';
+  anos.forEach(ano=>{
+    months.forEach(m=>{
+      const v=evoVal(ano,m);
+      if(v===0) return;
+      const i=D.cat ? CATS.filter(c=>selCats.has(c)).reduce((s,cat)=>{
+        const d=D.cat[cat]?.[sa(ano)]?.[sa(m)]; return s+(d&&d[1]?d[1]:0); },0) : 0;
+      html+=`<tr><td>${ano}</td><td>${MF[sa(m)]}</td><td class="r">${brl(v)}</td>
+        <td class="r">${num(i)}</td><td class="r">—</td></tr>`;
+    });
+  });
+  document.getElementById('tb-mensal').innerHTML=html;
+}
+
+// ── ENTERAL PANEL ──────────────────────────────────────────────────────────
+function renderEnteralPanel(){
+  const entAnosList=Object.keys(D.ent_monthly).map(Number).sort();
+  const total=D.ent_total;
+  const secTotals=D.ent_sec;
+  const sup=secTotals['SUPLEMENTOS']||0;
+  const ent_eb=secTotals['DIETAS ENTERAIS - EASY BAG 500ML - 1000ML']||0;
+  const ent_ped=secTotals['DIETAS ENTERAIS PEDIÁTRICAS']||0;
+  const ent_po=secTotals['PRODUTOS EM PÓ - LATAS/SACHÊ']||0;
+
+  document.getElementById('ent-kpis').innerHTML=[
+    {bg:'#C8380A',label:'💰 Total Geral',val:total,sub:'Jan/2025 – Mar/2026'},
+    {bg:'#E07B5A',label:'📦 Suplementos',val:sup,sub:'Fresubin Drink/Creme'},
+    {bg:'#8B1A00',label:'🍶 Dietas Enterais',val:ent_eb,sub:'Easy Bag 500ml/1000ml'},
+    {bg:'#6B3020',label:'👶 Pediátrico + Pó',val:ent_ped+ent_po,sub:'Frebini + Módulos'},
+  ].map(k=>`<div class="ent-card" style="background:${k.bg}">
+    <div class="el">${k.label}</div><div class="ev">${brl(k.val)}</div>
+    <div class="es">${k.sub}</div></div>`).join('');
+
+  dc('ent-mes');
+  const barLabels=[],barVals=[],barColors=[];
+  entAnosList.forEach(ano=>{
+    const md=D.ent_monthly[sa(ano)]; const col=ENT_ANO_COLS[sa(ano)]||'#888';
+    Object.entries(md).sort((a,b)=>+a[0]-+b[0]).forEach(([m,v])=>{
+      if(v>0){barLabels.push(`${MS[sa(m)]}/${String(ano).slice(2)}`);barVals.push(v);barColors.push(col);}
+    });
+  });
+  charts['ent-mes']=new Chart(document.getElementById('c-ent-mes').getContext('2d'),{
+    type:'bar', data:{labels:barLabels,datasets:[{label:'Dieta Enteral',data:barVals,backgroundColor:barColors,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+brl(c.raw)}}},
+      scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}}}}
+  });
+
+  dc('ent-sec');
+  const secData=Object.entries(secTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  charts['ent-sec']=new Chart(document.getElementById('c-ent-sec').getContext('2d'),{
+    type:'doughnut', data:{labels:secData.map(([s])=>s.length>30?s.slice(0,28)+'…':s),
+      datasets:[{data:secData.map(([,v])=>v),backgroundColor:['#C8380A','#E07B5A','#8B1A00','#F0A080'],
+        borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${brl(c.raw)} (${pct(c.raw/total)})`}}}}
+  });
+
+  dc('ent-top');
+  const topEnt=D.ent_prods.slice(0,15);
+  charts['ent-top']=new Chart(document.getElementById('c-ent-top').getContext('2d'),{
+    type:'bar', data:{labels:topEnt.map(p=>p.p.length>40?p.p.slice(0,38)+'…':p.p),
+      datasets:[{data:topEnt.map(p=>p.v),backgroundColor:'#C8380A',borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+brl(c.raw)}}},
+      scales:{x:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}},y:{ticks:{font:{size:9}},grid:{display:false}}}}
+  });
+
+  let html='';
+  D.ent_prods.forEach((p,i)=>{
+    html+=`<tr><td class="r">${i+1}</td><td class="pn">${p.p}</td>
+      <td><span class="bcat" style="background:#C8380A;font-size:.65rem">${p.s.length>20?p.s.slice(0,18)+'…':p.s}</span></td>
+      <td class="r">${brl(p.v)}</td><td class="r">${num(p.q)}</td></tr>`;
+  });
+  document.getElementById('tb-ent').innerHTML=html||'<tr><td colspan="5" style="text-align:center;color:#aaa">Sem dados</td></tr>';
+}
+
+// ── ENTRADA & CONSUMO PANEL ────────────────────────────────────────────────
+function ecGetTotals(){
+  let e=0, cAll=0;
+  [...ecSelAnos].forEach(ano=>{
+    [...ecSelBases].forEach(base=>{
+      for(let m=1;m<=12;m++){
+        const bd=D.ec_base[base]?.[ano]?.[String(m)];
+        if(bd){e+=bd.e; cAll+=bd.c;}
+      }
+    });
+  });
+  const tipoTotal=[...ecSelTipos].reduce((s,t)=>s+[...ecSelAnos].reduce((s2,ano)=>s2+(D.ec_tipo[t]?.[ano]||0),0),0);
+  const allTipoTotal=D.ec_tipos.reduce((s,t)=>s+[...ecSelAnos].reduce((s2,ano)=>s2+(D.ec_tipo[t]?.[ano]||0),0),0);
+  const frac=allTipoTotal>0?tipoTotal/allTipoTotal:1;
+  return {e, c:cAll*frac, s:e-cAll*frac};
+}
+
+function renderECPanel(){
+  const {e,c,s}=ecGetTotals();
+  const covPct=e>0?(c/e*100).toFixed(1):'—';
+  document.getElementById('ec-kpis').innerHTML=[
+    {bg:'#2E75B6',icon:'📥',label:'Total Entradas', val:brl(e), sub:`${[...ecSelAnos].join('/')} · ${[...ecSelBases].join(', ')}`},
+    {bg:'#ED7D31',icon:'📤',label:'Total Consumo',  val:brl(c), sub:'Saídas (tipos filtrados)'},
+    {bg:s>=0?'#70AD47':'#C00000',icon:s>=0?'✅':'⚠️',label:'Saldo Líquido',val:brl(Math.abs(s)),sub:s>=0?'Superávit':'Déficit'},
+    {bg:'#595959',icon:'📊',label:'Cobertura',val:covPct+'%',sub:'Entrada ÷ Consumo'},
+  ].map(k=>`<div class="ent-card" style="background:${k.bg}">
+    <div class="el">${k.icon} ${k.label}</div><div class="ev">${k.val}</div>
+    <div class="es">${k.sub}</div></div>`).join('');
+
+  dc('ec-evo');
+  const months=Array.from({length:12},(_,i)=>i+1);
+  const eLs=[],cLs=[],sLs=[];
+  months.forEach(m=>{
+    let eV=0,cV=0;
+    [...ecSelAnos].forEach(ano=>{
+      [...ecSelBases].forEach(base=>{
+        const bd=D.ec_base[base]?.[ano]?.[String(m)];
+        if(bd){eV+=bd.e;cV+=bd.c;}
+      });
+    });
+    eLs.push(eV);cLs.push(cV);sLs.push(eV-cV);
+  });
+  charts['ec-evo']=new Chart(document.getElementById('c-ec-evo').getContext('2d'),{
+    type:'bar', data:{labels:months.map(m=>MS[String(m)]),
+      datasets:[
+        {label:'Entrada',data:eLs,backgroundColor:EC_ENT_COLOR+'CC',borderRadius:3,order:2},
+        {label:'Consumo',data:cLs,backgroundColor:EC_SAI_COLOR+'CC',borderRadius:3,order:2},
+        {label:'Saldo',data:sLs,type:'line',borderColor:EC_SALDO_COLOR,backgroundColor:EC_SALDO_COLOR+'22',
+          tension:.3,fill:false,pointRadius:4,borderWidth:2,order:1,yAxisID:'ys'}
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${brl(c.raw)}`}}},
+      scales:{x:{grid:{display:false}},
+        y:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}},
+        ys:{position:'right',ticks:{callback:v=>brl(v)},grid:{display:false}}}}
+  });
+
+  dc('ec-tipo');
+  const tv=[...ecSelTipos].map(t=>[...ecSelAnos].reduce((s,ano)=>s+(D.ec_tipo[t]?.[ano]||0),0));
+  const tl=[...ecSelTipos];
+  const ttot=tv.reduce((a,b)=>a+b,0);
+  charts['ec-tipo']=new Chart(document.getElementById('c-ec-tipo').getContext('2d'),{
+    type:'doughnut', data:{labels:tl,datasets:[{data:tv,
+      backgroundColor:tl.map(t=>TIPO_COLORS[t]||'#888'),borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:12,padding:6}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${brl(c.raw)} (${pct(c.raw/ttot)})`}}}}
+  });
+
+  dc('ec-unid');
+  const filtU=D.ec_unids.filter(u=>ecSelBases.has(D.ec_unid_base[u]||''));
+  const euV=[],cuV=[];
+  filtU.forEach(u=>{
+    let ev=0,cv=0;
+    [...ecSelAnos].forEach(ano=>{ const ud=D.ec_unid[u]?.[ano]; if(ud){ev+=ud.e;cv+=ud.c;} });
+    euV.push(ev);cuV.push(cv);
+  });
+  charts['ec-unid']=new Chart(document.getElementById('c-ec-unid').getContext('2d'),{
+    type:'bar', data:{labels:filtU.map(u=>u.replace('HOSPITAL CASA ','HC ').replace('HOSPITAL ','H. ')),
+      datasets:[{label:'Entrada',data:euV,backgroundColor:EC_ENT_COLOR,borderRadius:4},
+                {label:'Consumo',data:cuV,backgroundColor:EC_SAI_COLOR,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${brl(c.raw)}`}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:30}},y:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}}}}
+  });
+
+  dc('ec-top-sai');
+  const topS=D.ec_top.filter(p=>ecSelBases.has(p.b)).slice(0,20);
+  charts['ec-top-sai']=new Chart(document.getElementById('c-ec-top-sai').getContext('2d'),{
+    type:'bar', data:{labels:topS.map(p=>p.p.length>36?p.p.slice(0,34)+'…':p.p),
+      datasets:[{data:topS.map(p=>p.v),backgroundColor:EC_SAI_COLOR,borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+brl(c.raw)}}},
+      scales:{x:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}},y:{ticks:{font:{size:9}},grid:{display:false}}}}
+  });
+
+  dc('ec-top-ent');
+  const topE=D.ec_top_ent.filter(p=>ecSelBases.has(p.b)).slice(0,20);
+  charts['ec-top-ent']=new Chart(document.getElementById('c-ec-top-ent').getContext('2d'),{
+    type:'bar', data:{labels:topE.map(p=>p.p.length>36?p.p.slice(0,34)+'…':p.p),
+      datasets:[{data:topE.map(p=>p.v),backgroundColor:EC_ENT_COLOR,borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+brl(c.raw)}}},
+      scales:{x:{ticks:{callback:v=>brl(v)},grid:{color:'#eee'}},y:{ticks:{font:{size:9}},grid:{display:false}}}}
+  });
+
+  let html='';
+  filtU.forEach((u,i)=>{
+    let ev=0,cv=0;
+    [...ecSelAnos].forEach(ano=>{ const ud=D.ec_unid[u]?.[ano]; if(ud){ev+=ud.e;cv+=ud.c;} });
+    const sv=ev-cv; const cov=ev>0?(cv/ev*100).toFixed(1)+'%':'—';
+    const base=D.ec_unid_base[u]||''; const bc=BASE_COLORS[base]||'#888';
+    const sc=sv>=0?'#70AD47':'#C00000';
+    html+=`<tr style="background:${i%2===0?'#f9f9f9':'#fff'}">
+      <td>${u.replace('HOSPITAL CASA ','HC ').replace('HOSPITAL ','H. ')}</td>
+      <td><span style="background:${bc};color:#fff;padding:2px 6px;border-radius:4px;font-size:.7rem">${base}</span></td>
+      <td class="r">${brl(ev)}</td><td class="r">${brl(cv)}</td>
+      <td class="r" style="color:${sc};font-weight:700">${sv>=0?'':'-'}${brl(Math.abs(sv))}</td>
+      <td class="r">${cov}</td></tr>`;
+  });
+  document.getElementById('tb-ec-unid').innerHTML=html||'<tr><td colspan="6" style="text-align:center;color:#aaa">Sem dados</td></tr>';
+}
+
+function sortT(id,col){
+  const tb=document.getElementById(id).querySelector('tbody');
+  const rows=[...tb.querySelectorAll('tr')];
+  const asc=tb.dataset.col==col&&tb.dataset.dir=='asc';
+  rows.sort((a,b)=>{
+    const av=a.cells[col]?.textContent.replace(/[R$\s,.%–\-]/g,'')||'';
+    const bv=b.cells[col]?.textContent.replace(/[R$\s,.%–\-]/g,'')||'';
+    const an=parseFloat(av),bn=parseFloat(bv);
+    return isNaN(an)||isNaN(bn)?asc?av.localeCompare(bv,'pt-BR'):bv.localeCompare(av,'pt-BR'):(asc?an-bn:bn-an);
+  });
+  tb.dataset.col=col; tb.dataset.dir=asc?'desc':'asc';
+  rows.forEach(r=>tb.appendChild(r));
+}
+</script>
+</body>
+</html>
